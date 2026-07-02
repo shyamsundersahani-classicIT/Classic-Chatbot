@@ -256,3 +256,12 @@ app_license = "mit"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+# Classic Chatbot Include
+# Classic Chatbot Include
+app_include_js = [
+    "/assets/classic_chatbot/js/classic_chatbot_agent.js"
+]
+
+web_include_js = [
+    "/assets/classic_chatbot/js/classic_chatbot_agent.js"
+]
