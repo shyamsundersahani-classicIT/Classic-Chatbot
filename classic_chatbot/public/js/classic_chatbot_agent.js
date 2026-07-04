@@ -1,5 +1,5 @@
 (function () {
-    console.log("[Classic Chatbot v6.1] Loaded with Dynamic SPA Context Fix");
+    console.log("[Classic Chatbot v7.0] Loaded with Dynamic SPA Context & Agent Sync");
 
     var last_error = "";
 
@@ -33,14 +33,15 @@
     }
 
     function injectStyle() {
-        if (document.getElementById("classic-chatbot-style-v6")) return;
+        if (document.getElementById("classic-chatbot-style-v7")) return;
         var style = document.createElement("style");
-        style.id = "classic-chatbot-style-v6";
+        style.id = "classic-chatbot-style-v7";
         style.innerHTML = `
             #classic-chatbot-launcher { position: fixed; right: 28px; bottom: 28px; width: 72px; height: 72px; border-radius: 50%; border: none; background: linear-gradient(135deg,#5b3df5,#b36cff); color: white; font-size: 32px; z-index: 999999; cursor: pointer; box-shadow: 0 18px 45px rgba(124,77,255,.45); transition: transform .3s ease; animation: ccPulse 2s infinite; }
             #classic-chatbot-launcher:hover { transform: scale(1.08) rotate(4deg); }
             #classic-chatbot-launcher.cc-hide { opacity: 0; pointer-events: none; transform: scale(.35) rotate(15deg); }
-            #classic-chatbot-panel { position: fixed; right: 24px; bottom: 24px; width: 430px; height: 650px; background: white; border-radius: 30px; z-index: 999999; box-shadow: 0 30px 90px rgba(0,0,0,.28); overflow: hidden; opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(55px) scale(.78); transform-origin: bottom right; transition: all .35s ease; }
+            
+            #classic-chatbot-panel { position: fixed; right: 24px; bottom: 24px; width: 440px; height: 680px; background: white; border-radius: 30px; z-index: 999999; box-shadow: 0 30px 90px rgba(0,0,0,.28); overflow: hidden; opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(55px) scale(.78); transform-origin: bottom right; transition: all .35s ease; }
             #classic-chatbot-panel.cc-open { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0) scale(1); }
             
             .cc-head { height: 110px; background: linear-gradient(135deg,#5b3df5,#b36cff); color: white; padding: 20px; font-size: 24px; font-weight: 800; position: relative; }
@@ -55,20 +56,27 @@
             #classic-chatbot-model-select option { color: #333; font-weight: 500; }
             #classic-chatbot-model-select:hover { background: rgba(255,255,255,0.3); }
 
-            #classic-chatbot-body { height: 410px; padding: 20px; background: linear-gradient(180deg,#f8f9ff,#eef2ff); overflow-y: auto; scroll-behavior: smooth; }
+            #classic-chatbot-body { height: 440px; padding: 20px; background: linear-gradient(180deg,#f8f9ff,#eef2ff); overflow-y: auto; scroll-behavior: smooth; }
             .cc-bot-msg { background: white; padding: 14px 16px; border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,.08); margin-bottom: 12px; color: #263248; line-height: 1.5; animation: ccMsgIn .25s ease; word-wrap: break-word;}
             .cc-user-msg { background: linear-gradient(135deg,#5b3df5,#b36cff); color: white; padding: 14px 16px; border-radius: 18px; margin-left: auto; margin-bottom: 12px; max-width: 82%; line-height: 1.5; animation: ccMsgIn .25s ease; word-wrap: break-word;}
             .cc-sys-msg { background: #eef2ff; color: #4f46e5; border-left: 4px solid #4f46e5; padding: 10px; font-size: 13px; margin-bottom: 12px; border-radius: 8px; animation: ccMsgIn .25s ease; }
-            .cc-quick { display: flex; gap: 8px; padding: 10px 16px; background: white; border-top: 1px solid #eee; }
-            .cc-quick button { border: 1px solid #ddd6fe; background: #faf5ff; color: #5b21b6; border-radius: 20px; padding: 7px 11px; font-size: 12px; cursor: pointer; }
+            
+            /* Quick actions horizontally scrollable for more buttons */
+            .cc-quick { display: flex; gap: 8px; padding: 10px 16px; background: white; border-top: 1px solid #eee; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+            .cc-quick::-webkit-scrollbar { display: none; }
+            .cc-quick button { border: 1px solid #ddd6fe; background: #faf5ff; color: #5b21b6; border-radius: 20px; padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+            .cc-quick button:hover { background: #f3e8ff; }
+            
             .cc-foot { padding: 15px; display: flex; gap: 10px; border-top: 1px solid #eee; background: white; }
-            #classic-chatbot-input { flex: 1; height: 48px; border: 1px solid #ddd; border-radius: 24px; padding: 0 16px; outline: none; }
+            #classic-chatbot-input { flex: 1; height: 48px; border: 1px solid #ddd; border-radius: 24px; padding: 0 16px; outline: none; font-size: 14px; }
             #classic-chatbot-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 4px rgba(139,92,246,.12); }
             #classic-chatbot-send { width: 52px; height: 52px; border-radius: 50%; border: none; background: linear-gradient(135deg,#5b3df5,#b36cff); color: white; font-size: 22px; cursor: pointer; transition: transform .2s ease; }
             #classic-chatbot-send:hover { transform: scale(1.08); }
+            
             .cc-typing span { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: #8b5cf6; animation: ccTyping 1s infinite ease-in-out; }
             .cc-typing span:nth-child(2) { animation-delay: .15s; }
             .cc-typing span:nth-child(3) { animation-delay: .3s; }
+            
             @keyframes ccPulse { 0% { box-shadow: 0 0 0 0 rgba(124,77,255,.42); } 70% { box-shadow: 0 0 0 14px rgba(124,77,255,0); } 100% { box-shadow: 0 0 0 0 rgba(124,77,255,0); } }
             @keyframes ccMsgIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
             @keyframes ccTyping { 0%,80%,100% { transform: scale(.6); opacity: .45; } 40% { transform: scale(1); opacity: 1; } }
@@ -98,15 +106,17 @@
                     '<option value="groq">☁️ Groq (Fast & Paid)</option>' +
                     '<option value="local">🖥️ Local (Strict Free)</option>' +
                 '</select>' +
-                '<div style="font-size:14px;font-weight:400;margin-top:6px;">● Agent Mode</div>' +
+                '<div style="font-size:14px;font-weight:400;margin-top:6px;">● Principal Architect Active</div>' +
             '</div>' +
             '<div id="classic-chatbot-body">' +
-                '<div class="cc-bot-msg">Hello 👋 Model Switcher active hai. Kaise help karu?</div>' +
+                '<div class="cc-bot-msg">Namaste Bhai 🙏 Classic Chatbot ready hai. Boliye, kis Frappe/ERPNext module me help chahiye?</div>' +
             '</div>' +
+            // NEW QUICK BUTTONS ALIGNED WITH BACKEND SITUATIONAL LOGIC
             '<div class="cc-quick">' +
-                '<button type="button" data-q="current form me kya missing hai?">Missing?</button>' +
-                '<button type="button" data-q="is form ke mandatory fields kya hain?">Mandatory</button>' +
-                '<button type="button" data-q="is error ka solution batao">Error Fix</button>' +
+                '<button type="button" data-q="Is form ke mandatory fields kya hain?">Mandatory?</button>' +
+                '<button type="button" data-q="Ye DocType kis kis se link hai?">Linked Links</button>' +
+                '<button type="button" data-q="Is form ka business me kya use hai?">Kya Use Hai?</button>' +
+                '<button type="button" data-q="Current form me error aa raha hai, fix karo">Fix Error</button>' +
             '</div>' +
             '<div class="cc-foot">' +
                 '<input id="classic-chatbot-input" placeholder="Ask ERPNext issue..." autocomplete="off" />' +
@@ -116,14 +126,14 @@
         document.body.appendChild(launcher);
         document.body.appendChild(panel);
 
-        // NAYA FIX: Frappe SPA Route Change Listener
+        // Frappe SPA Route Change Listener
         if (window.frappe && frappe.router) {
             frappe.router.on('change', function() {
                 setTimeout(function() { // Halka sa delay taaki route puri tarah set ho jaye
                     var newCtx = getContext();
                     var body = document.getElementById("classic-chatbot-body");
                     if (body && newCtx.doctype) {
-                        body.insertAdjacentHTML("beforeend", `<div class="cc-sys-msg">🔄 Switched to <b>${newCtx.doctype}</b>. Chatbot context is updated.</div>`);
+                        body.insertAdjacentHTML("beforeend", `<div class="cc-sys-msg">🔄 Switched to <b>${newCtx.doctype}</b>. Context updated.</div>`);
                         body.scrollTop = body.scrollHeight;
                     }
                 }, 500);
@@ -162,7 +172,6 @@
         var body = document.getElementById("classic-chatbot-body");
         if (!body) return;
         
-        // Syntax fix: Removed double backslash for newlines
         var finalHTML = esc(text).replace(/\n/g, "<br>");
         if (rawHTML) {
             finalHTML += rawHTML;
@@ -205,16 +214,16 @@
         if (!window.frappe || !frappe.call) {
             setTimeout(function () {
                 hideTyping();
-                addBotMessage("Frappe API available nahi hai.");
+                addBotMessage("Frappe API available nahi hai. Refresh karo.");
             }, 400);
             return;
         }
 
-        // NAYA FIX: Dynamic form data copying taaki bot pura form samajh sake
+        // Dynamic form data copying (Filtered properly to prevent huge payload crash)
         var safeDocData = {};
         if (ctx.doc) {
             Object.keys(ctx.doc).forEach(function(key) {
-                // Ignore heavy objects/arrays aur internal metadata (jo '_' se shuru hote hain)
+                // Ignore heavy objects/arrays (like child tables right now) aur internal metadata
                 if (!key.startsWith("_") && typeof ctx.doc[key] !== "object") {
                     safeDocData[key] = ctx.doc[key];
                 }
@@ -222,7 +231,7 @@
         }
 
         frappe.call({
-            method: "classic_chatbot.api.agent.ask",
+            method: "classic_chatbot.api.agent.ask", // Backend path
             args: {
                 question: msg,
                 doctype: ctx.doctype,
@@ -234,7 +243,7 @@
             },
             callback: function (r) {
                 hideTyping();
-                var answer = "Message sent, but no response received.";
+                var answer = "Server ne answer generate nahi kiya.";
                 var modelBadge = ""; 
 
                 if (r && r.message) {
@@ -248,7 +257,7 @@
             },
             error: function (err) {
                 hideTyping();
-                addBotMessage("API error aa gaya. Bench terminal check karo.");
+                addBotMessage("API error aa gaya. Browser console ya bench terminal check karo.");
             }
         });
     }
@@ -283,5 +292,5 @@
 
     if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", mountBot); } 
     else { mountBot(); }
-    setTimeout(mountBot, 1000);
+    setTimeout(mountBot, 1000); // Failsafe loader
 })();
