@@ -1,0 +1,9 @@
+{
+  "name": "classic_chatbot",
+  "private": true,
+  "description": "Vendored runtime binaries for the Classic Chatbot Claude+MCP path. bench build/setup installs these into the app's node_modules on Frappe Cloud (no global installs, no nvm). Paths resolved in classic_chatbot/api/mcp_client.py:app_node_bin().",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^2.1.207",
+    "@casys/mcp-erpnext": "^2.3.1"
+  }
+}

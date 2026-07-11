@@ -1,5 +1,7 @@
 import json
+import os
 import select
+import shutil
 import subprocess
 import threading
 import time
@@ -9,59 +11,79 @@ import frappe
 # ============================================================
 # Classic Chatbot - MCP ERPNext Bridge (stdio transport)
 #
-# Ek persistent mcp-erpnext subprocess per worker. Newline-delimited
-# JSON-RPC over stdin/stdout (MCP stdio transport). HTTP mode is npm
-# build me broken hai (Deno globals chahiye), isliye stdio.
+# Frappe Cloud branch: sirf write-tool deny-list discovery ke liye
+# short-lived MCPStdioClient chahiye (claude_agent.get_write_tool_names).
+# mcp-erpnext binary app ke apne node_modules me vendored hai
+# (package.json), aur ERP credentials site_config se aate hain -
+# koi wrapper script / erpnext.env file nahi.
+#
+# HTTP mode npm build me broken hai (Deno globals chahiye), isliye stdio.
 # ============================================================
-
-_lock = threading.Lock()
-_client = None
-
-
-# Generic doc tools hamesha included - kisi bhi DocType (User, Employee, PO...)
-# ka data nikal sakte hain. Baaki specialized tools question-keywords se select
-# hote hain, kyunki CPU-only 7B model 26+ tool schemas handle nahi kar pata.
-ALWAYS_TOOLS = ["erpnext_doc_list", "erpnext_doc_get"]
-
-# Question keywords -> specialized tool prefixes
-TOOL_KEYWORDS = {
-    "erpnext_customer_list": ["customer", "grahak", "client", "party"],
-    "erpnext_sales_order_list": ["sales order", "so ", "order"],
-    "erpnext_sales_invoice_list": ["invoice", "bill", "billing"],
-    "erpnext_quotation_list": ["quotation", "quote"],
-    "erpnext_item_list": ["item", "product", "maal"],
-    "erpnext_stock_balance": ["stock", "balance", "qty", "quantity", "inventory"],
-    "erpnext_warehouse_list": ["warehouse", "godown"],
-    "erpnext_stock_entry_list": ["stock entry", "material transfer"],
-}
 
 # Write/mutation tools default me blocked (safety)
 WRITE_SUFFIXES = ("_create", "_update", "_delete", "_submit", "_cancel")
 
-MAX_SELECTED_TOOLS = 5
+
+def app_node_bin(name):
+    """App ke vendored node_modules/.bin me se binary ka path."""
+    app_root = os.path.dirname(frappe.get_app_path("classic_chatbot"))
+    return os.path.join(app_root, "node_modules", ".bin", name)
+
+
+def node_env():
+    """Subprocess env jisme node PATH me guaranteed ho.
+
+    Vendored bins (#!/usr/bin/env node) ko node chahiye; RQ/gunicorn
+    worker ka PATH minimal ho sakta hai. site_config
+    `classic_chatbot_node_bin` se override, warna `which node`.
+    """
+    env = dict(os.environ)
+    env.setdefault("HOME", os.path.expanduser("~"))
+    node_bin = frappe.conf.get("classic_chatbot_node_bin")
+    if not node_bin:
+        node = shutil.which("node")
+        node_bin = os.path.dirname(node) if node else None
+    if node_bin:
+        env["PATH"] = node_bin + ":" + env.get("PATH", "")
+    return env
+
+
+def get_erpnext_env():
+    """mcp-erpnext ke ERP credentials site_config se (service user ke API key/secret)."""
+    url = frappe.conf.get("classic_chatbot_erpnext_url")
+    key = frappe.conf.get("classic_chatbot_erpnext_api_key")
+    secret = frappe.conf.get("classic_chatbot_erpnext_api_secret")
+    if not (url and key and secret):
+        frappe.throw(
+            "Classic Chatbot: classic_chatbot_erpnext_url / _api_key / _api_secret "
+            "site_config me set karo (service user ke API credentials)."
+        )
+    return {
+        "ERPNEXT_URL": url,
+        "ERPNEXT_API_KEY": key,
+        "ERPNEXT_API_SECRET": secret,
+    }
 
 
 def get_mcp_config():
-    allowlist = frappe.conf.get("classic_chatbot_mcp_tools")
-    if isinstance(allowlist, str):
-        allowlist = [t.strip() for t in allowlist.split(",") if t.strip()]
     return {
-        "command": frappe.conf.get("classic_chatbot_mcp_command")
-        or "/home/frappeuser/.claude/mcp-wrappers/erpnext.sh",
-        "categories": frappe.conf.get("classic_chatbot_mcp_categories") or "sales,inventory,operations",
+        "command": frappe.conf.get("classic_chatbot_mcp_command") or app_node_bin("mcp-erpnext"),
+        "categories": frappe.conf.get("classic_chatbot_mcp_categories")
+        or "sales,crm,hr,inventory,analytics,operations",
         "timeout": int(frappe.conf.get("classic_chatbot_mcp_timeout") or 60),
-        "tool_allowlist": allowlist,  # set karo to router bypass ho jata hai
-        "allow_writes": bool(frappe.conf.get("classic_chatbot_mcp_allow_writes")),
     }
 
 
 class MCPStdioClient:
     """Minimal synchronous MCP client over stdio (newline-delimited JSON-RPC)."""
 
-    def __init__(self, command, args=None, timeout=60):
+    def __init__(self, command, args=None, timeout=60, env=None):
         self.timeout = timeout
         self._id = 0
         self._io_lock = threading.Lock()
+        proc_env = node_env()
+        if env:
+            proc_env.update(env)
         self.proc = subprocess.Popen(
             [command] + (args or []),
             stdin=subprocess.PIPE,
@@ -69,6 +91,7 @@ class MCPStdioClient:
             stderr=subprocess.DEVNULL,
             text=True,
             bufsize=1,
+            env=proc_env,
         )
         self._initialize()
 
@@ -145,7 +168,7 @@ class MCPStdioClient:
                 "capabilities": {},
                 "clientInfo": {"name": "classic-chatbot", "version": "0.1"},
             },
-            timeout=90,  # pehli baar npx cold start slow ho sakta hai
+            timeout=90,
         )
         self._send("notifications/initialized", is_notification=True)
         self._tools_cache = None
@@ -183,58 +206,3 @@ def strip_ui_meta(text):
         return obj
 
     return json.dumps(clean(data), ensure_ascii=False, default=str)
-
-
-def get_client():
-    """Per-worker persistent client. Dead process par transparent reconnect."""
-    global _client
-    with _lock:
-        if _client is None or not _client.is_alive():
-            conf = get_mcp_config()
-            args = []
-            if conf["categories"]:
-                args.append(f"--categories={conf['categories']}")
-            _client = MCPStdioClient(conf["command"], args, timeout=conf["timeout"])
-        return _client
-
-
-def select_tool_names(question, conf):
-    """Per-question tool selection: generic doc tools + keyword-matched specialized tools."""
-    if conf["tool_allowlist"]:
-        return conf["tool_allowlist"]
-
-    q = (question or "").lower()
-    selected = list(ALWAYS_TOOLS)
-    for tool_name, keywords in TOOL_KEYWORDS.items():
-        if len(selected) >= MAX_SELECTED_TOOLS:
-            break
-        if any(kw in q for kw in keywords):
-            selected.append(tool_name)
-    return selected
-
-
-def get_ollama_tools(question=None, max_description_chars=150):
-    """MCP tool schemas -> Ollama/OpenAI function-calling format (router filtered)."""
-    conf = get_mcp_config()
-    wanted = select_tool_names(question, conf)
-    tools = []
-    for t in get_client().list_tools():
-        if t["name"] not in wanted:
-            continue
-        if not conf["allow_writes"] and t["name"].endswith(WRITE_SUFFIXES):
-            continue
-        tools.append(
-            {
-                "type": "function",
-                "function": {
-                    "name": t["name"],
-                    "description": (t.get("description") or "")[:max_description_chars],
-                    "parameters": t.get("inputSchema") or {"type": "object", "properties": {}},
-                },
-            }
-        )
-    return tools
-
-
-def call_mcp_tool(name, arguments=None):
-    return get_client().call_tool(name, arguments)

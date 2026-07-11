@@ -7,17 +7,15 @@ import threading
 import frappe
 
 # ============================================================
-# Classic Chatbot - Claude Code Headless Agent
+# Classic Chatbot - Claude Code Headless Agent (Frappe Cloud branch)
 #
-# `claude -p` (print mode) ko subprocess me chalata hai. Auth Claude Code
-# ke subscription login se aata hai (~/.claude.json OAuth) - koi API key
-# nahi chahiye. MCP erpnext server wahi wrapper script use karta hai jo
-# mcp_client.py use karta hai, --strict-mcp-config ke sath taaki sirf
-# erpnext tools load hon (koi aur project config/skills nahi).
-#
-# Note: har query account owner ke Claude subscription usage me count
-# hoti hai (5-hour rate-limit windows). Model default "haiku" rakha hai
-# taaki quota halka rahe.
+# `claude -p` (print mode) ko subprocess me chalata hai. Binaries app ke
+# vendored node_modules se aate hain (package.json - koi global install /
+# nvm nahi). Auth per-user Claude token se (`/login` + token_store);
+# site_config `classic_chatbot_require_user_token 1` par bina token ke
+# koi subprocess spawn nahi hota. ERP credentials (service user ka API
+# key/secret) site_config se inject hote hain - koi erpnext.env file
+# nahi. --strict-mcp-config taaki sirf erpnext tools load hon.
 # ============================================================
 
 _mcp_config_lock = threading.Lock()
@@ -62,13 +60,12 @@ SYSTEM_PROMPT = (
 
 
 def get_claude_config():
-    from classic_chatbot.api.mcp_client import get_mcp_config
+    from classic_chatbot.api.mcp_client import app_node_bin, get_mcp_config
 
     mcp = get_mcp_config()
     return {
-        "bin": frappe.conf.get("classic_chatbot_claude_bin")
-        or os.path.expanduser("~/.local/bin/claude"),
-        "model": frappe.conf.get("classic_chatbot_claude_model") or "haiku",
+        "bin": frappe.conf.get("classic_chatbot_claude_bin") or app_node_bin("claude"),
+        "model": frappe.conf.get("classic_chatbot_claude_model") or "sonnet",
         "timeout": int(frappe.conf.get("classic_chatbot_claude_timeout") or 150),
         "max_turns": int(frappe.conf.get("classic_chatbot_claude_max_turns") or 12),
         "allow_writes": bool(frappe.conf.get("classic_chatbot_claude_allow_writes")),
@@ -79,7 +76,14 @@ def get_claude_config():
 
 
 def get_mcp_config_file(conf):
-    """Ek strict MCP config file banao jisme sirf erpnext server ho."""
+    """Ek strict MCP config file banao jisme sirf erpnext server ho.
+
+    ERP credentials site_config se env block me jaate hain (mkstemp file
+    0600 hoti hai; sirf bench user padh sakta hai). File per-worker cache
+    hoti hai - creds badle to workers restart karo.
+    """
+    from classic_chatbot.api.mcp_client import get_erpnext_env
+
     global _mcp_config_path
     with _mcp_config_lock:
         if _mcp_config_path and os.path.exists(_mcp_config_path):
@@ -90,7 +94,7 @@ def get_mcp_config_file(conf):
                     "type": "stdio",
                     "command": conf["mcp_command"],
                     "args": [f"--categories={conf['mcp_categories']}"] if conf["mcp_categories"] else [],
-                    "env": {},
+                    "env": get_erpnext_env(),
                 }
             }
         }
@@ -114,11 +118,11 @@ def get_write_tool_names():
     client = None
     try:
         from classic_chatbot.api.mcp_client import (
-            WRITE_SUFFIXES, MCPStdioClient, get_mcp_config)
+            WRITE_SUFFIXES, MCPStdioClient, get_erpnext_env, get_mcp_config)
 
         conf = get_mcp_config()
         args = [f"--categories={conf['categories']}"] if conf["categories"] else []
-        client = MCPStdioClient(conf["command"], args, timeout=conf["timeout"])
+        client = MCPStdioClient(conf["command"], args, timeout=conf["timeout"], env=get_erpnext_env())
         names = [t["name"] for t in client.list_tools()]
         tools = [n for n in names if n.endswith(WRITE_SUFFIXES) or n == "erpnext_kanban_move_card"]
         frappe.cache.set_value("classic_chatbot_write_tools", tools, expires_in_sec=86400)
@@ -182,14 +186,17 @@ def ask_claude(question, doctype=None, docname=None, doc=None, route=None, error
     if not conf["allow_writes"]:
         cmd += ["--disallowedTools", ",".join(get_write_tool_names())]
 
+    base_cmd = list(cmd)
     if session_id:
         cmd += ["--resume", session_id]
 
-    env = dict(os.environ)
-    env.setdefault("HOME", os.path.expanduser("~"))
-    env["PATH"] = env.get("PATH", "") + ":" + os.path.expanduser("~/.local/bin")
-    # npx cold start slow ho sakta hai - MCP server connect ka wait badhao (ms)
+    from classic_chatbot.api.mcp_client import get_erpnext_env, node_env
+
+    env = node_env()
+    # MCP server connect ka wait (ms) - cold start ke liye headroom
     env.setdefault("MCP_TIMEOUT", "60000")
+    # ERP creds config-file env ke sath belt-and-braces subprocess env me bhi
+    env.update(get_erpnext_env())
 
     # Per-user token: is user ki query us ke apne Claude subscription se
     # chale. Token env me inject; server ke ~/.claude login se override.
@@ -207,6 +214,17 @@ def ask_claude(question, doctype=None, docname=None, doc=None, route=None, error
             timeout=conf["timeout"],
             env=env,
         )
+        # Stale session id (FC deploy par ~/.claude wipe ho jata hai) -
+        # resume fail hua to fresh session se ek retry
+        if proc.returncode != 0 and session_id:
+            proc = subprocess.run(
+                base_cmd,
+                input=user_msg,
+                capture_output=True,
+                text=True,
+                timeout=conf["timeout"],
+                env=env,
+            )
     except subprocess.TimeoutExpired:
         return {
             "answer": "Bhai, Claude se response aane me time lag raha hai (timeout). Thoda simple question try karo.",
