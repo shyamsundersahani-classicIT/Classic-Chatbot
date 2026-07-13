@@ -58,6 +58,80 @@ SYSTEM_PROMPT = (
     "You have read-only access - politely refuse create/update/delete requests."
 )
 
+# Company travel/expense policy data (source PDFs: "02_Travel Expenses and
+# Local Conveyance Policy" Rev 01 WEF 2025-09-01; "2.2_Travel Policy for Site
+# Workmen - Solar" R3 WEF 2025-05-01). Expense-claim/travel questions ke liye.
+POLICY_CONTEXT = (
+    "\n\nCOMPANY POLICY REFERENCE (use when answering expense claim / travel / "
+    "reimbursement questions; quote the applicable cap and policy name):\n"
+    "\n[A] Travel Expenses & Local Conveyance Policy - Signage Division staff up to "
+    "Manager, Grade C-H, incl. Jaipur & Bengaluru branches (Ref CSPL/IMS/HR/PP-02, "
+    "Rev 01, WEF 2025-09-01). All amounts INR.\n"
+    "- General: travel pre-authorized by reporting manager; claims within 7 working "
+    "days of travel completion with original receipts/tickets; exceptions need "
+    "written approval from HR + department head; non-compliance = denial. "
+    "HR contact: hrd@allusign.com.\n"
+    "- Air: Economy class only for all staff incl. managers (domestic & "
+    "international); Business/First strictly prohibited; book via company-approved "
+    "agents/portals.\n"
+    "- Rail: Executive-Manager: 3AC or Chair Car for journeys >200 km. Managers: "
+    "1AC/2AC overnight or AC Chair Car day journeys if lower class unavailable. "
+    "Lower-class travel reimbursed at actual fare; shortest/most economical route.\n"
+    "- Road: company car/taxi/Uber-Ola/public transport allowed; personal vehicle "
+    "only with prior approval at Rs 10/km car, Rs 4/km bike; parking & tolls "
+    "reimbursable with receipts; public transport under Rs 100/trip claimable by "
+    "self-declaration (no receipt); self-driven rentals need management approval; "
+    "managers may book outstation taxis with prior approval.\n"
+    "- Hotel (per night incl. taxes & breakfast): Tier 1 cities "
+    "(Delhi/Mumbai/Bangalore/Chennai) max Rs 3,000; Tier 2/3 cities max Rs 2,000; "
+    "no suites/luxury/upgrades; reimbursed at actual or cap, whichever is lower.\n"
+    "- Meals: actuals only, Rs 600-800/day cap (all meals + non-alcoholic "
+    "beverages); no alcohol, no mini-bar/room service; bills required, no per diem.\n"
+    "- Misc: internet, official calls, laundry (stays >3 nights) reimbursable with "
+    "receipts; movies/spa/gym/gifts/shopping never reimbursable; company provides "
+    "travel insurance for trips >2 days.\n"
+    "- Advances: up to 80% of estimated expenses; settle within 7 days of return, "
+    "else may be deducted from salary.\n"
+    "\n[B] Travel Policy for Site Workmen - Solar (R3, WEF 2025-05-01): site "
+    "technicians/supervisors/sr. supervisors/engineers. All amounts INR.\n"
+    "- Classes: Class A roams among multiple sites - full reimbursement per below. "
+    "Class B long-term at one dedicated site - food & hotel all-inclusive in a "
+    "monthly fixed allowance (no separate claims), fixed 30-day working package. "
+    "Class C local-area employee - wages only, no travel allowances; if a Class C "
+    "employee travels to another location, full Class A reimbursement applies. "
+    "All classes: after every 3 months at site without leave, eligible for 7 days "
+    "unpaid leave with prior manager approval.\n"
+    "- Local conveyance (official work, not Class B): own vehicle Rs 4/km; public "
+    "transport (bus/metro) at actual fare.\n"
+    "- Out-city travel: Non-AC bus / train (General/Sleeper) at actual fare with "
+    "legible tickets; choosing AC class = comfort journey and night allowance is "
+    "forfeited.\n"
+    "- Food allowance (full day): Rajasthan (excl. Jaipur) Rs 250/day; outside "
+    "Rajasthan Rs 300/day; Southern region, Eastern 7 sister states & Odisha "
+    "Rs 350/day; excludes employee's domicile location.\n"
+    "- Hotel/lodge (per person/night): Rajasthan (excl. Jaipur): 1 person Rs 500, "
+    "2 persons Rs 300 each, 3+ Rs 250 each. Outside Rajasthan (excl. domicile): "
+    "1 person Rs 600, 2 persons Rs 400 each, 3+ Rs 300 each. Supervisor at one "
+    "site >10 days: Rs 400/day hotel instead of Rs 600.\n"
+    "- Night allowance: Rs 250/night/person only when traveling to/from site at "
+    "night/midnight AND traveling non-AC class. Retiring room between connecting "
+    "trains up to Rs 200 if wait >6 hours.\n"
+    "- Proof: hotel/lodge invoices; restaurant bill with stamp + owner name & "
+    "number; digital payment receipts (Paytm/PhonePe/GPay); cash receipts.\n"
+    "- Claims: Travel Expense Voucher in prescribed format with original bills "
+    "within 7 days of travel date; late/non-submission can delay or block salary. "
+    "Cancellation charges borne by employee unless company changed the program. "
+    "Jaipur arrival during office hours: report to office within 4 hours (else "
+    "salary deduction); arrival after 2 AM: may join by half-day. Advances allowed "
+    "with reporting-manager approval. No reimbursement for personal travel from "
+    "site without informing manager. No overtime for site supervisors. "
+    "Sunday/holiday presence mandatory if site/office is running, else absent. "
+    "Travel allowance on approved leave: yes (site-office both ways); unapproved "
+    "leave: none if returning to same site, office-to-new-site allowance if "
+    "reassigned. Class A staying with Class B at same site: processed as two "
+    "individuals staying together per policy."
+)
+
 
 def get_claude_config():
     from classic_chatbot.api.mcp_client import app_node_bin, get_mcp_config
@@ -65,8 +139,8 @@ def get_claude_config():
     mcp = get_mcp_config()
     return {
         "bin": frappe.conf.get("classic_chatbot_claude_bin") or app_node_bin("claude"),
-        "model": frappe.conf.get("classic_chatbot_claude_model") or "sonnet",
-        "timeout": int(frappe.conf.get("classic_chatbot_claude_timeout") or 150),
+        "model": frappe.conf.get("classic_chatbot_claude_model") or "fable",
+        "timeout": int(frappe.conf.get("classic_chatbot_claude_timeout") or 240),
         "max_turns": int(frappe.conf.get("classic_chatbot_claude_max_turns") or 12),
         "allow_writes": bool(frappe.conf.get("classic_chatbot_claude_allow_writes")),
         "require_user_token": bool(frappe.conf.get("classic_chatbot_require_user_token")),
@@ -180,7 +254,7 @@ def ask_claude(question, doctype=None, docname=None, doc=None, route=None, error
         "--mcp-config", get_mcp_config_file(conf),
         "--strict-mcp-config",
         "--allowedTools", "mcp__erpnext",
-        "--append-system-prompt", SYSTEM_PROMPT,
+        "--append-system-prompt", SYSTEM_PROMPT + POLICY_CONTEXT,
     ]
 
     if not conf["allow_writes"]:

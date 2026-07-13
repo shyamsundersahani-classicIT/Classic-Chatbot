@@ -68,8 +68,9 @@ def get_erpnext_env():
 def get_mcp_config():
     return {
         "command": frappe.conf.get("classic_chatbot_mcp_command") or app_node_bin("mcp-erpnext"),
-        "categories": frappe.conf.get("classic_chatbot_mcp_categories")
-        or "sales,crm,hr,inventory,analytics,operations",
+        # Default: no category trim -> full mcp-erpnext tool set (120 tools).
+        # site_config `classic_chatbot_mcp_categories` se trim kar sakte ho.
+        "categories": frappe.conf.get("classic_chatbot_mcp_categories") or "",
         "timeout": int(frappe.conf.get("classic_chatbot_mcp_timeout") or 60),
     }
 
