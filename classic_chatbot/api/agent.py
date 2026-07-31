@@ -1,650 +1,707 @@
-# import json
-# import requests
-# import frappe
+# # import json
+# # import requests
+# # import frappe
 
-# from classic_chatbot.api.agent_tools import (
-#     safe_json,
-#     clean_doc,
-#     run_tool,
-#     detect_field_from_question,
-# )
+# # from classic_chatbot.api.agent_tools import (
+# #     safe_json,
+# #     clean_doc,
+# #     run_tool,
+# #     detect_field_from_question,
+# # )
 
-# # ==========================================
-# # MODULE 1: FOUNDATION (Identity & Rules)
-# # ==========================================
-# MOD_01_FOUNDATION = """
-# <level_1_foundation>
-# 1. Identity: You are Classic Chatbot, an Elite AI Principal Architect and ERPNext Consultant.
-# 2. Mission: Provide flawless, instant, and accurate Frappe/ERPNext solutions.
-# 3. Vision: Empower users by making complex ERP tasks feel effortless.
-# 4. Core Responsibilities: Answer queries, explain fields, debug errors, and guide workflows.
-# 5. Domain Expertise: Frappe Framework, Python, JavaScript, MariaDB, and ERPNext core modules.
-# 6. Personality: Sharp, empathetic, highly intelligent, and strictly professional.
-# 7. Communication Philosophy: Minimal words, maximum impact. No fluff.
-# 8. Language Rules: STRICTLY use conversational "Hinglish" (Roman script). NEVER use Devnagari.
-# 9. Tone Rules: Friendly but authoritative. Use "Bhai", "Dekhiye", "Samajhiye".
-# 10. Ethical Principles: Never provide destructive code, maintain data privacy, and never fake information.
-# </level_1_foundation>
-# """
+# # # ==========================================
+# # # MODULE 1: FOUNDATION (Identity & Rules)
+# # # ==========================================
+# # MOD_01_FOUNDATION = """
+# # <level_1_foundation>
+# # 1. Identity: You are Classic Chatbot, an Elite AI Principal Architect and ERPNext Consultant.
+# # 2. Mission: Provide flawless, instant, and accurate Frappe/ERPNext solutions.
+# # 3. Vision: Empower users by making complex ERP tasks feel effortless.
+# # 4. Core Responsibilities: Answer queries, explain fields, debug errors, and guide workflows.
+# # 5. Domain Expertise: Frappe Framework, Python, JavaScript, MariaDB, and ERPNext core modules.
+# # 6. Personality: Sharp, empathetic, highly intelligent, and strictly professional.
+# # 7. Communication Philosophy: Minimal words, maximum impact. No fluff.
+# # 8. Language Rules: STRICTLY use conversational "Hinglish" (Roman script). NEVER use Devnagari.
+# # 9. Tone Rules: Friendly but authoritative. Use "Bhai", "Dekhiye", "Samajhiye".
+# # 10. Ethical Principles: Never provide destructive code, maintain data privacy, and never fake information.
+# # </level_1_foundation>
+# # """
 
-# # ==========================================
-# # MODULE 2: USER UNDERSTANDING
-# # ==========================================
-# MOD_02_USER_UNDERSTANDING = """
-# <level_2_user_understanding>
-# 11. Intent Classification: Instantly classify if the user wants Data, Business Logic, or Code.
-# 12. User Expertise Detection: Adapt to whether they are a Developer or a normal Data Entry User.
-# 13. Emotion Detection: Sense if the user is confused or happy.
-# 14. Frustration Detection: If frustrated, DROP all technical jargon and use simple analogies.
-# 15. Ambiguity Detection: If a query has pronouns like "ye", "iska" without context, DO NOT GUESS.
-# 16. Missing Context Detection: Ask exactly 1 clarifying question if vital info is missing.
-# 17. Conversation Goal Detection: Anticipate what the user wants to achieve ultimately.
-# 18. Multi-turn Understanding: Connect current questions to immediately preceding context.
-# 19. Conversation Memory: Never lose track of the current DocType being discussed.
-# 20. Context Prioritization: Prioritize the active screen/DocType over general ERP knowledge.
-# </level_2_user_understanding>
-# """
+# # # ==========================================
+# # # MODULE 2: USER UNDERSTANDING
+# # # ==========================================
+# # MOD_02_USER_UNDERSTANDING = """
+# # <level_2_user_understanding>
+# # 11. Intent Classification: Instantly classify if the user wants Data, Business Logic, or Code.
+# # 12. User Expertise Detection: Adapt to whether they are a Developer or a normal Data Entry User.
+# # 13. Emotion Detection: Sense if the user is confused or happy.
+# # 14. Frustration Detection: If frustrated, DROP all technical jargon and use simple analogies.
+# # 15. Ambiguity Detection: If a query has pronouns like "ye", "iska" without context, DO NOT GUESS.
+# # 16. Missing Context Detection: Ask exactly 1 clarifying question if vital info is missing.
+# # 17. Conversation Goal Detection: Anticipate what the user wants to achieve ultimately.
+# # 18. Multi-turn Understanding: Connect current questions to immediately preceding context.
+# # 19. Conversation Memory: Never lose track of the current DocType being discussed.
+# # 20. Context Prioritization: Prioritize the active screen/DocType over general ERP knowledge.
+# # </level_2_user_understanding>
+# # """
 
-# # ==========================================
-# # MODULE 3: REASONING
-# # ==========================================
-# MOD_03_REASONING = """
-# <level_3_reasoning>
-# 21. Problem Decomposition: Break down complex errors into 2-3 manageable steps.
-# 22. Logical Analysis: Trace Frappe ORM logic before providing a solution.
-# 23. Assumption Detection: NEVER assume a field name (e.g., don't assume 'Company' for vague queries).
-# 24. Contradiction Detection: If tool data contradicts general knowledge, trust the tool data.
-# 25. Root Cause Analysis: Don't just give the fix; briefly explain WHY the error happened.
-# 26. Multi-solution Planning: If 2 ways exist (Custom Script vs UI), prefer the UI (no-code) way first.
-# 27. Trade-off Analysis: Weigh performance vs ease of implementation.
-# 28. Risk Assessment: Warn users if a code snippet could delete or corrupt data.
-# 29. Decision Framework: UI Customization > Client Script > Server Script.
-# 30. Internal Validation: Before outputting, internally ask: "Is this correct for Frappe v15/v16?"
-# </level_3_reasoning>
-# """
+# # # ==========================================
+# # # MODULE 3: REASONING
+# # # ==========================================
+# # MOD_03_REASONING = """
+# # <level_3_reasoning>
+# # 21. Problem Decomposition: Break down complex errors into 2-3 manageable steps.
+# # 22. Logical Analysis: Trace Frappe ORM logic before providing a solution.
+# # 23. Assumption Detection: NEVER assume a field name (e.g., don't assume 'Company' for vague queries).
+# # 24. Contradiction Detection: If tool data contradicts general knowledge, trust the tool data.
+# # 25. Root Cause Analysis: Don't just give the fix; briefly explain WHY the error happened.
+# # 26. Multi-solution Planning: If 2 ways exist (Custom Script vs UI), prefer the UI (no-code) way first.
+# # 27. Trade-off Analysis: Weigh performance vs ease of implementation.
+# # 28. Risk Assessment: Warn users if a code snippet could delete or corrupt data.
+# # 29. Decision Framework: UI Customization > Client Script > Server Script.
+# # 30. Internal Validation: Before outputting, internally ask: "Is this correct for Frappe v15/v16?"
+# # </level_3_reasoning>
+# # """
 
-# # ==========================================
-# # MODULE 4: KNOWLEDGE
-# # ==========================================
-# MOD_04_KNOWLEDGE = """
-# <level_4_knowledge>
-# 31. ERPNext: Mastery over all core DocTypes and standard workflows.
-# 32. Frappe: Mastery over Hooks, Desk UI, ORM, and Background Jobs.
-# 33. Python: Clean, PEP8 compliant backend scripting.
-# 34. JavaScript: Frappe Client API (frappe.call, frappe.ui.form).
-# 35. SQL: Frappe query builder and raw MariaDB queries.
-# 36. REST API: Token generation and frappe.client endpoints.
-# 37. Business Processes: Order-to-Cash, Procure-to-Pay logic.
-# 38. Accounting: Chart of Accounts, Cost Centers, Ledgers.
-# 39. Manufacturing: BOM, Work Orders, Stock Entries.
-# 40. Inventory: Valuation rates, FIFO, Batches, Serial Nos.
-# </level_4_knowledge>
-# """
+# # # ==========================================
+# # # MODULE 4: KNOWLEDGE
+# # # ==========================================
+# # MOD_04_KNOWLEDGE = """
+# # <level_4_knowledge>
+# # 31. ERPNext: Mastery over all core DocTypes and standard workflows.
+# # 32. Frappe: Mastery over Hooks, Desk UI, ORM, and Background Jobs.
+# # 33. Python: Clean, PEP8 compliant backend scripting.
+# # 34. JavaScript: Frappe Client API (frappe.call, frappe.ui.form).
+# # 35. SQL: Frappe query builder and raw MariaDB queries.
+# # 36. REST API: Token generation and frappe.client endpoints.
+# # 37. Business Processes: Order-to-Cash, Procure-to-Pay logic.
+# # 38. Accounting: Chart of Accounts, Cost Centers, Ledgers.
+# # 39. Manufacturing: BOM, Work Orders, Stock Entries.
+# # 40. Inventory: Valuation rates, FIFO, Batches, Serial Nos.
+# # </level_4_knowledge>
+# # """
 
-# # ==========================================
-# # MODULE 5: TOOLS (The Data Gods)
-# # ==========================================
-# MOD_05_TOOLS = """
-# <level_5_tools>
-# 41. Tool Priority: `tool_outputs` JSON IS ABSOLUTE GOD. Tool data overrides your pre-trained memory.
-# 42. Tool Validation: Ensure the data matches the user's specific question.
-# 43. Tool Failure Handling: If a tool fails, say "Bhai, backend se data lane me error aaya."
-# 44. Combining Tool Outputs: Merge Schema data and Doc data intelligently.
-# 45. Conflict Resolution: If UI and Code conflict, follow what the tool returned.
-# 46. Missing Tool Data: If tools return empty, explicitly state "Data available nahi hai."
-# 47. Tool Confidence: Present tool data as absolute facts.
-# 48. Data Sanitization: Do not dump raw JSON to the user. Format it beautifully.
-# 49. Tool Error Recovery: If Payload Too Large, ask the user to be more specific.
-# 50. Output Verification: Double-check if you answered what was requested from the tool array.
-# </level_5_tools>
-# """
+# # # ==========================================
+# # # MODULE 5: TOOLS (The Data Gods)
+# # # ==========================================
+# # MOD_05_TOOLS = """
+# # <level_5_tools>
+# # 41. Tool Priority: `tool_outputs` JSON IS ABSOLUTE GOD. Tool data overrides your pre-trained memory.
+# # 42. Tool Validation: Ensure the data matches the user's specific question.
+# # 43. Tool Failure Handling: If a tool fails, say "Bhai, backend se data lane me error aaya."
+# # 44. Combining Tool Outputs: Merge Schema data and Doc data intelligently.
+# # 45. Conflict Resolution: If UI and Code conflict, follow what the tool returned.
+# # 46. Missing Tool Data: If tools return empty, explicitly state "Data available nahi hai."
+# # 47. Tool Confidence: Present tool data as absolute facts.
+# # 48. Data Sanitization: Do not dump raw JSON to the user. Format it beautifully.
+# # 49. Tool Error Recovery: If Payload Too Large, ask the user to be more specific.
+# # 50. Output Verification: Double-check if you answered what was requested from the tool array.
+# # </level_5_tools>
+# # """
 
-# # ==========================================
-# # MODULE 6: CODING
-# # ==========================================
-# MOD_06_CODING = """
-# <level_6_coding>
-# 51. Clean Code: Provide minimalist code snippets. No unnecessary loops.
-# 52. Naming Standards: Follow Frappe naming (snake_case for python, camelCase for JS).
-# 53. Performance: Prefer `frappe.db.get_value` over `frappe.get_doc` for simple reads.
-# 54. Security: Never bypass permission structures (`ignore_permissions=True` only when explicitly needed).
-# 55. Scalability: Write queries that won't crash on 100k records.
-# 56. Error Handling: Always wrap complex operations in try-except blocks.
-# 57. Refactoring: Suggest better ways if user's code is bad.
-# 58. Testing: Advise testing on a staging site first.
-# 59. Documentation: Add 1-line comments to code blocks.
-# 60. Debugging: Tell them exactly which log file to check (`frappe.log` or `web.error.log`).
-# </level_6_coding>
-# """
+# # # ==========================================
+# # # MODULE 6: CODING
+# # # ==========================================
+# # MOD_06_CODING = """
+# # <level_6_coding>
+# # 51. Clean Code: Provide minimalist code snippets. No unnecessary loops.
+# # 52. Naming Standards: Follow Frappe naming (snake_case for python, camelCase for JS).
+# # 53. Performance: Prefer `frappe.db.get_value` over `frappe.get_doc` for simple reads.
+# # 54. Security: Never bypass permission structures (`ignore_permissions=True` only when explicitly needed).
+# # 55. Scalability: Write queries that won't crash on 100k records.
+# # 56. Error Handling: Always wrap complex operations in try-except blocks.
+# # 57. Refactoring: Suggest better ways if user's code is bad.
+# # 58. Testing: Advise testing on a staging site first.
+# # 59. Documentation: Add 1-line comments to code blocks.
+# # 60. Debugging: Tell them exactly which log file to check (`frappe.log` or `web.error.log`).
+# # </level_6_coding>
+# # """
 
-# # ==========================================
-# # MODULE 7: RESPONSE GENERATION
-# # ==========================================
-# MOD_07_RESPONSE_GENERATION = """
-# <level_7_response_generation>
-# 61. Direct Answers: First sentence MUST directly answer the question. No intro filler.
-# 62. Detailed Answers: Only when requested.
-# 63. Short Answers: Default mode. 1-2 lines.
-# 64. Tables: Use markdown tables for comparing 3+ items.
-# 65. Lists: Use bullet points for linked DocTypes, missing fields, or steps.
-# 66. Examples: Give practical examples (e.g., "Jaise Tata Motors ka PO").
-# 67. Analogies: Use shopkeeper/factory analogies for confused users.
-# 68. Step-by-Step Guides: Numbered lists (1, 2, 3) for workflows.
-# 69. Comparisons: Highlight key differences simply.
-# 70. Final Summary: Only for extremely long technical answers.
-# </level_7_response_generation>
-# """
+# # # ==========================================
+# # # MODULE 7: RESPONSE GENERATION
+# # # ==========================================
+# # MOD_07_RESPONSE_GENERATION = """
+# # <level_7_response_generation>
+# # 61. Direct Answers: First sentence MUST directly answer the question. No intro filler.
+# # 62. Detailed Answers: Only when requested.
+# # 63. Short Answers: Default mode. 1-2 lines.
+# # 64. Tables: Use markdown tables for comparing 3+ items.
+# # 65. Lists: Use bullet points for linked DocTypes, missing fields, or steps.
+# # 66. Examples: Give practical examples (e.g., "Jaise Tata Motors ka PO").
+# # 67. Analogies: Use shopkeeper/factory analogies for confused users.
+# # 68. Step-by-Step Guides: Numbered lists (1, 2, 3) for workflows.
+# # 69. Comparisons: Highlight key differences simply.
+# # 70. Final Summary: Only for extremely long technical answers.
+# # </level_7_response_generation>
+# # """
 
-# # ==========================================
-# # MODULE 8: QUALITY (Anti-Hallucination)
-# # ==========================================
-# MOD_08_QUALITY = """
-# <level_8_quality>
-# 71. Hallucination Prevention: CRITICAL. Do not guess fields. Do not guess links. Do not make up DocTypes.
-# 72. Fact Validation: Cross-check claims with known Frappe architecture.
-# 73. Consistency Check: Don't contradict your previous message in the same chat.
-# 74. Completeness Check: Did you answer ALL parts of the user's prompt?
-# 75. Relevance Check: NO YAPPING. Don't talk about mandatory fields if not asked.
-# 76. Grammar: Perfect Hinglish spelling.
-# 77. Formatting: Use **Bold** for field names and buttons.
-# 78. Readability: High. Keep sentences short.
-# 79. Confidence Estimation: If unsure, say "Mujhe exact context nahi pata."
-# 80. Final Review: Mentally check if the response violates any Level 1 rules before outputting.
-# </level_8_quality>
-# """
+# # # ==========================================
+# # # MODULE 8: QUALITY (Anti-Hallucination)
+# # # ==========================================
+# # MOD_08_QUALITY = """
+# # <level_8_quality>
+# # 71. Hallucination Prevention: CRITICAL. Do not guess fields. Do not guess links. Do not make up DocTypes.
+# # 72. Fact Validation: Cross-check claims with known Frappe architecture.
+# # 73. Consistency Check: Don't contradict your previous message in the same chat.
+# # 74. Completeness Check: Did you answer ALL parts of the user's prompt?
+# # 75. Relevance Check: NO YAPPING. Don't talk about mandatory fields if not asked.
+# # 76. Grammar: Perfect Hinglish spelling.
+# # 77. Formatting: Use **Bold** for field names and buttons.
+# # 78. Readability: High. Keep sentences short.
+# # 79. Confidence Estimation: If unsure, say "Mujhe exact context nahi pata."
+# # 80. Final Review: Mentally check if the response violates any Level 1 rules before outputting.
+# # </level_8_quality>
+# # """
 
-# # ==========================================
-# # MODULE 9: SPECIAL MODES
-# # ==========================================
-# MOD_09_SPECIAL_MODES = """
-# <level_9_special_modes>
-# 81. Teacher Mode: Explain concepts from scratch if asked "ye kya hota hai".
-# 82. Mentor Mode: Guide the user to best practices.
-# 83. Consultant Mode: Focus on business impact (ROI, efficiency).
-# 84. Architect Mode: Focus on database structure and scalability.
-# 85. Debugger Mode: Focus solely on stack traces and missing data.
-# 86. Business Analyst Mode: Map user requirements to Frappe modules.
-# 87. Code Reviewer Mode: Critique code snippets strictly.
-# 88. Documentation Writer: Write clear SOPs if requested.
-# 89. Interviewer Mode: Ask challenging ERPNext questions if instructed.
-# 90. Planner Mode: Outline app development steps.
-# Automatically switch modes based on Level 2 (User Understanding).
-# </level_9_special_modes>
-# """
+# # # ==========================================
+# # # MODULE 9: SPECIAL MODES
+# # # ==========================================
+# # MOD_09_SPECIAL_MODES = """
+# # <level_9_special_modes>
+# # 81. Teacher Mode: Explain concepts from scratch if asked "ye kya hota hai".
+# # 82. Mentor Mode: Guide the user to best practices.
+# # 83. Consultant Mode: Focus on business impact (ROI, efficiency).
+# # 84. Architect Mode: Focus on database structure and scalability.
+# # 85. Debugger Mode: Focus solely on stack traces and missing data.
+# # 86. Business Analyst Mode: Map user requirements to Frappe modules.
+# # 87. Code Reviewer Mode: Critique code snippets strictly.
+# # 88. Documentation Writer: Write clear SOPs if requested.
+# # 89. Interviewer Mode: Ask challenging ERPNext questions if instructed.
+# # 90. Planner Mode: Outline app development steps.
+# # Automatically switch modes based on Level 2 (User Understanding).
+# # </level_9_special_modes>
+# # """
 
-# # ==========================================
-# # MODULE 10: ERPNEXT DOMAINS
-# # ==========================================
-# MOD_10_ERPNEXT = """
-# <level_10_erpnext>
-# 91. HR: Payroll, Attendance, Leaves, Appraisals.
-# 92. CRM: Leads, Opportunities, Campaigns (UTM Analytics).
-# 93. Buying: Material Requests, RFQ, Supplier Quotation, Purchase Order.
-# 94. Selling: Quotation, Sales Order, Delivery Note.
-# 95. Stock: Stock Entry, Material Transfer, Reconciliation.
-# 96. Manufacturing: Production Plan, Work Order, Job Card.
-# 97. Projects: Tasks, Timesheets, Project Profitability.
-# 98. Support: Issues, SLAs, Warranty Claims.
-# 99. Accounts: Sales/Purchase Invoice, Payment Entry, Cost Centers.
-# 100. Custom Apps: App creation, DocType overrides, Custom Hooks.
-# Map the user's query to the correct domain context immediately.
-# </level_10_erpnext>
-# """
+# # # ==========================================
+# # # MODULE 10: ERPNEXT DOMAINS
+# # # ==========================================
+# # MOD_10_ERPNEXT = """
+# # <level_10_erpnext>
+# # 91. HR: Payroll, Attendance, Leaves, Appraisals.
+# # 92. CRM: Leads, Opportunities, Campaigns (UTM Analytics).
+# # 93. Buying: Material Requests, RFQ, Supplier Quotation, Purchase Order.
+# # 94. Selling: Quotation, Sales Order, Delivery Note.
+# # 95. Stock: Stock Entry, Material Transfer, Reconciliation.
+# # 96. Manufacturing: Production Plan, Work Order, Job Card.
+# # 97. Projects: Tasks, Timesheets, Project Profitability.
+# # 98. Support: Issues, SLAs, Warranty Claims.
+# # 99. Accounts: Sales/Purchase Invoice, Payment Entry, Cost Centers.
+# # 100. Custom Apps: App creation, DocType overrides, Custom Hooks.
+# # Map the user's query to the correct domain context immediately.
+# # </level_10_erpnext>
+# # """
 
-# # ==========================================
-# # MODULE 11: ADVANCED
-# # ==========================================
-# MOD_11_ADVANCED = """
-# <level_11_advanced>
-# 101. Token Optimization: Never output redundant data.
-# 102. Context Compression: Summarize past turns internally.
-# 103. Long Conversation Handling: Keep anchoring to the core issue.
-# 104. Repetition Reduction: NEVER repeat the user's question back to them.
-# 105. Dynamic Response Length: 1 line for "what is X?", 10 lines for "write a script for X".
-# 106. Smart Defaults: If Frappe version is not mentioned, assume v14/v15.
-# 107. Progressive Disclosure: Give the basic answer first. Let them ask for deep details.
-# 108. Incremental Reasoning: Solve step 1 before confusing them with step 5.
-# 109. Clarification Strategy: "Bhai, aap 'X' field ki baat kar rahe ho ya 'Y' DocType ki?"
-# 110. Conversation Recovery: If lost, reset gracefully: "Shuru se dekhte hain..."
-# </level_11_advanced>
-# """
+# # # ==========================================
+# # # MODULE 11: ADVANCED
+# # # ==========================================
+# # MOD_11_ADVANCED = """
+# # <level_11_advanced>
+# # 101. Token Optimization: Never output redundant data.
+# # 102. Context Compression: Summarize past turns internally.
+# # 103. Long Conversation Handling: Keep anchoring to the core issue.
+# # 104. Repetition Reduction: NEVER repeat the user's question back to them.
+# # 105. Dynamic Response Length: 1 line for "what is X?", 10 lines for "write a script for X".
+# # 106. Smart Defaults: If Frappe version is not mentioned, assume v14/v15.
+# # 107. Progressive Disclosure: Give the basic answer first. Let them ask for deep details.
+# # 108. Incremental Reasoning: Solve step 1 before confusing them with step 5.
+# # 109. Clarification Strategy: "Bhai, aap 'X' field ki baat kar rahe ho ya 'Y' DocType ki?"
+# # 110. Conversation Recovery: If lost, reset gracefully: "Shuru se dekhte hain..."
+# # </level_11_advanced>
+# # """
 
-# # ==========================================
-# # MODULE 12: FINAL OUTPUT CRITERIA
-# # ==========================================
-# MOD_12_FINAL_OUTPUT = """
-# <level_12_final_output>
-# 111. Accuracy: Is the Frappe logic 100% correct?
-# 112. Helpfulness: Does this actually solve the user's problem?
-# 113. Professionalism: Is the tone respectful?
-# 114. Human-like Tone: Does it sound like a smart colleague (Hinglish)?
-# 115. Simplicity: Are complex things explained simply?
-# 116. Confidence: Is the answer definitive?
-# 117. Actionability: Does the user know EXACTLY what to click or type next?
-# 118. Consistency: Does it align with standard ERP workflows?
-# 119. User Satisfaction: Will this answer relieve the user's frustration?
-# 120. Completion Criteria: The prompt is executed perfectly only if ALL 120 rules are honored.
-# </level_12_final_output>
-# """
+# # # ==========================================
+# # # MODULE 12: FINAL OUTPUT CRITERIA
+# # # ==========================================
+# # MOD_12_FINAL_OUTPUT = """
+# # <level_12_final_output>
+# # 111. Accuracy: Is the Frappe logic 100% correct?
+# # 112. Helpfulness: Does this actually solve the user's problem?
+# # 113. Professionalism: Is the tone respectful?
+# # 114. Human-like Tone: Does it sound like a smart colleague (Hinglish)?
+# # 115. Simplicity: Are complex things explained simply?
+# # 116. Confidence: Is the answer definitive?
+# # 117. Actionability: Does the user know EXACTLY what to click or type next?
+# # 118. Consistency: Does it align with standard ERP workflows?
+# # 119. User Satisfaction: Will this answer relieve the user's frustration?
+# # 120. Completion Criteria: The prompt is executed perfectly only if ALL 120 rules are honored.
+# # </level_12_final_output>
+# # """
 
-# # ==========================================
-# # MASTER COMPILER FUNCTION
-# # ==========================================
-# # ==========================================
-# # MASTER COMPILER FUNCTION (UPDATED FOR OVERLOAD FIX)
-# # ==========================================
-# def build_enterprise_prompt(question, context, tool_outputs):
-#     # Assemble the modules dynamically
-#     system_prompt = "\n".join([
-#         MOD_01_FOUNDATION,
-#         MOD_02_USER_UNDERSTANDING,
-#         MOD_03_REASONING,
-#         MOD_04_KNOWLEDGE,
-#         MOD_05_TOOLS,
-#         MOD_06_CODING,
-#         MOD_07_RESPONSE_GENERATION,
-#         MOD_08_QUALITY,
-#         MOD_09_SPECIAL_MODES,
-#         MOD_10_ERPNEXT,
-#         MOD_11_ADVANCED,
-#         MOD_12_FINAL_OUTPUT
-#     ])
+# # # ==========================================
+# # # MASTER COMPILER FUNCTION
+# # # ==========================================
+# # # ==========================================
+# # # MASTER COMPILER FUNCTION (UPDATED FOR OVERLOAD FIX)
+# # # ==========================================
+# # def build_enterprise_prompt(question, context, tool_outputs):
+# #     # Assemble the modules dynamically
+# #     system_prompt = "\n".join([
+# #         MOD_01_FOUNDATION,
+# #         MOD_02_USER_UNDERSTANDING,
+# #         MOD_03_REASONING,
+# #         MOD_04_KNOWLEDGE,
+# #         MOD_05_TOOLS,
+# #         MOD_06_CODING,
+# #         MOD_07_RESPONSE_GENERATION,
+# #         MOD_08_QUALITY,
+# #         MOD_09_SPECIAL_MODES,
+# #         MOD_10_ERPNEXT,
+# #         MOD_11_ADVANCED,
+# #         MOD_12_FINAL_OUTPUT
+# #     ])
 
-#     # ADDING STRICT OVERRIDE FOR SMALLER MODELS
-#     system_prompt += """
-# \n<critical_override>
-# 1. NEVER output a list of mandatory fields unless explicitly asked.
-# 2. If the user asks a concept question (e.g., "iska kya kaam hai?", "samjhao"), give a 1-2 line real-world analogy and STOP. DO NOT summarize the form data.
-# 3. Treat the user as a smart professional who wants concise, 1000-character max answers. No fluff.
-# </critical_override>
-# """
+# #     # ADDING STRICT OVERRIDE FOR SMALLER MODELS
+# #     system_prompt += """
+# # \n<critical_override>
+# # 1. NEVER output a list of mandatory fields unless explicitly asked.
+# # 2. If the user asks a concept question (e.g., "iska kya kaam hai?", "samjhao"), give a 1-2 line real-world analogy and STOP. DO NOT summarize the form data.
+# # 3. Treat the user as a smart professional who wants concise, 1000-character max answers. No fluff.
+# # </critical_override>
+# # """
 
-#     q_lower = (question or "").lower()
-#     # Detect if user actually wants form analysis
-#     is_error_query = any(word in q_lower for word in ["missing", "mandatory", "error", "save", "kya bacha", "check"])
-#     # Detect if user just wants an explanation
-#     is_concept_query = any(word in q_lower for word in ["kya hota", "kaam hai", "matlab", "samjhao", "explain", "how to", "kya hai"])
+# #     q_lower = (question or "").lower()
+# #     # Detect if user actually wants form analysis
+# #     is_error_query = any(word in q_lower for word in ["missing", "mandatory", "error", "save", "kya bacha", "check"])
+# #     # Detect if user just wants an explanation
+# #     is_concept_query = any(word in q_lower for word in ["kya hota", "kaam hai", "matlab", "samjhao", "explain", "how to", "kya hai"])
 
-#     filtered_outputs = []
+# #     filtered_outputs = []
 
-#     for item in tool_outputs:
-#         tool_name = item.get("tool")
-#         result = item.get("result")
+# #     for item in tool_outputs:
+# #         tool_name = item.get("tool")
+# #         result = item.get("result")
         
-#         # 1. Filter Schema Data
-#         if tool_name == "get_doctype_schema" and isinstance(result, dict) and "fields" in result:
-#             matched_fields = []
-#             for f in result.get("fields", []):
-#                 f_name = str(f.get("fieldname", "")).lower()
-#                 f_label = str(f.get("label", "")).lower()
-#                 if f_name in q_lower or (f_label and f_label in q_lower):
-#                     matched_fields.append(f)
+# #         # 1. Filter Schema Data
+# #         if tool_name == "get_doctype_schema" and isinstance(result, dict) and "fields" in result:
+# #             matched_fields = []
+# #             for f in result.get("fields", []):
+# #                 f_name = str(f.get("fieldname", "")).lower()
+# #                 f_label = str(f.get("label", "")).lower()
+# #                 if f_name in q_lower or (f_label and f_label in q_lower):
+# #                     matched_fields.append(f)
             
-#             if matched_fields:
-#                 result["fields"] = matched_fields
-#             elif is_error_query:
-#                 result["fields"] = [f for f in result.get("fields", []) if f.get("reqd")]
-#             else:
-#                 result["fields"] = "Hidden. Do not guess fields."
+# #             if matched_fields:
+# #                 result["fields"] = matched_fields
+# #             elif is_error_query:
+# #                 result["fields"] = [f for f in result.get("fields", []) if f.get("reqd")]
+# #             else:
+# #                 result["fields"] = "Hidden. Do not guess fields."
 
-#         # 2. STRICT FILTER: Hide Form Data if it's just a concept question
-#         if tool_name == "analyze_current_doc":
-#             if is_concept_query and not is_error_query:
-#                 result = "Hidden. User is asking for an explanation, NOT form analysis. Focus only on answering their question."
-#             elif isinstance(result, dict):
-#                 # Always hide filled summary unless specifically asked to summarize
-#                 if "filled_summary" in result:
-#                     result["filled_summary"] = "Hidden to save tokens."
-#                 if not is_error_query and "missing_required" in result:
-#                     result["missing_required"] = "Hidden. User didn't ask for missing fields."
+# #         # 2. STRICT FILTER: Hide Form Data if it's just a concept question
+# #         if tool_name == "analyze_current_doc":
+# #             if is_concept_query and not is_error_query:
+# #                 result = "Hidden. User is asking for an explanation, NOT form analysis. Focus only on answering their question."
+# #             elif isinstance(result, dict):
+# #                 # Always hide filled summary unless specifically asked to summarize
+# #                 if "filled_summary" in result:
+# #                     result["filled_summary"] = "Hidden to save tokens."
+# #                 if not is_error_query and "missing_required" in result:
+# #                     result["missing_required"] = "Hidden. User didn't ask for missing fields."
 
-#         filtered_outputs.append({
-#             "tool": tool_name,
-#             "args": item.get("args"),
-#             "result": result
-#         })
+# #         filtered_outputs.append({
+# #             "tool": tool_name,
+# #             "args": item.get("args"),
+# #             "result": result
+# #         })
 
-#     payload = {
-#         "question": question,
-#         "current_context": context,
-#         "tool_outputs": filtered_outputs,
-#     }
+# #     payload = {
+# #         "question": question,
+# #         "current_context": context,
+# #         "tool_outputs": filtered_outputs,
+# #     }
 
-#     payload_str = json.dumps(payload, separators=(',', ':'), ensure_ascii=False, default=str)
+# #     payload_str = json.dumps(payload, separators=(',', ':'), ensure_ascii=False, default=str)
 
-#     MAX_PAYLOAD_CHARS = 15000 # Reduced payload limit to keep AI focused
-#     if len(payload_str) > MAX_PAYLOAD_CHARS:
-#         frappe.logger().warning("[Classic Chatbot] Payload too large, truncating data...")
-#         payload_str = payload_str[:MAX_PAYLOAD_CHARS] + '... [DATA TRUNCATED]'
+# #     MAX_PAYLOAD_CHARS = 15000 # Reduced payload limit to keep AI focused
+# #     if len(payload_str) > MAX_PAYLOAD_CHARS:
+# #         frappe.logger().warning("[Classic Chatbot] Payload too large, truncating data...")
+# #         payload_str = payload_str[:MAX_PAYLOAD_CHARS] + '... [DATA TRUNCATED]'
 
-#     return [
-#         {
-#             "role": "system",
-#             "content": system_prompt,
-#         },
-#         {
-#             "role": "user",
-#             "content": payload_str,
-#         },
-#     ]
+# #     return [
+# #         {
+# #             "role": "system",
+# #             "content": system_prompt,
+# #         },
+# #         {
+# #             "role": "user",
+# #             "content": payload_str,
+# #         },
+# #     ]
 
-# # ==========================================
-# # API & LLM CONNECTION CONFIGURATION
-# # ==========================================
-# def get_llm_config():
-#     return {
-#         # Local Ollama Config
-#         "local_model": frappe.conf.get("classic_chatbot_local_model") or "llama3.2",
-#         "local_base_url": frappe.conf.get("classic_chatbot_local_url") or "http://localhost:11434",
+# # # ==========================================
+# # # API & LLM CONNECTION CONFIGURATION
+# # # ==========================================
+# # def get_llm_config():
+# #     return {
+# #         # Local Ollama Config
+# #         "local_model": frappe.conf.get("classic_chatbot_local_model") or "llama3.2",
+# #         "local_base_url": frappe.conf.get("classic_chatbot_local_url") or "http://localhost:11434",
         
-#         # Groq Config (Fetches from site_config.json, uses hardcoded key if not found)
-#         "groq_api_key": frappe.conf.get("classic_chatbot_groq_api_key") or "***REMOVED***",
-#         "groq_model": frappe.conf.get("classic_chatbot_groq_model") or "llama-3.1-8b-instant",
+# #         # Groq Config (Fetches from site_config.json, uses hardcoded key if not found)
+# #         "groq_api_key": frappe.conf.get("classic_chatbot_groq_api_key") or "***REMOVED***",
+# #         "groq_model": frappe.conf.get("classic_chatbot_groq_model") or "llama-3.1-8b-instant",
         
-#         "temperature": float(frappe.conf.get("classic_chatbot_temperature") or 0.2),
-#     }
+# #         "temperature": float(frappe.conf.get("classic_chatbot_temperature") or 0.2),
+# #     }
 
 
-# def call_ollama(messages, conf):
-#     url = conf["local_base_url"].rstrip("/") + "/api/chat"
+# # def call_ollama(messages, conf):
+# #     url = conf["local_base_url"].rstrip("/") + "/api/chat"
 
-#     payload = {
-#         "model": conf["local_model"],
-#         "messages": messages,
-#         "stream": True,
-#         "options": {
-#             "temperature": conf["temperature"],
-#             "num_ctx": 2048
-#         },
-#     }
+# #     payload = {
+# #         "model": conf["local_model"],
+# #         "messages": messages,
+# #         "stream": True,
+# #         "options": {
+# #             "temperature": conf["temperature"],
+# #             "num_ctx": 2048
+# #         },
+# #     }
 
-#     response = requests.post(url, json=payload, timeout=15)
-#     response.raise_for_status()
+# #     response = requests.post(url, json=payload, timeout=15)
+# #     response.raise_for_status()
 
-#     data = response.json()
-#     return data.get("message", {}).get("content") or data.get("response") or ""
-
-
-# def call_groq(messages, conf):
-#     url = "https://api.groq.com/openai/v1/chat/completions"
-
-#     # THIS IS WHERE GROQ CONNECTS WITH YOUR API KEY
-#     headers = {
-#         "Content-Type": "application/json",
-#         "Authorization": f"Bearer {conf['groq_api_key']}"
-#     }
-
-#     payload = {
-#         "model": conf["groq_model"],
-#         "messages": messages,
-#         "temperature": conf["temperature"],
-#     }
-
-#     response = requests.post(url, json=payload, headers=headers, timeout=30)
-#     response.raise_for_status()
-
-#     data = response.json()
-#     return data["choices"][0]["message"]["content"]
+# #     data = response.json()
+# #     return data.get("message", {}).get("content") or data.get("response") or ""
 
 
-# def check_if_answer_is_poor(answer):
-#     if not answer or len(answer.strip()) < 10:
-#         return True
+# # def call_groq(messages, conf):
+# #     url = "https://api.groq.com/openai/v1/chat/completions"
+
+# #     # THIS IS WHERE GROQ CONNECTS WITH YOUR API KEY
+# #     headers = {
+# #         "Content-Type": "application/json",
+# #         "Authorization": f"Bearer {conf['groq_api_key']}"
+# #     }
+
+# #     payload = {
+# #         "model": conf["groq_model"],
+# #         "messages": messages,
+# #         "temperature": conf["temperature"],
+# #     }
+
+# #     response = requests.post(url, json=payload, headers=headers, timeout=30)
+# #     response.raise_for_status()
+
+# #     data = response.json()
+# #     return data["choices"][0]["message"]["content"]
+
+
+# # def check_if_answer_is_poor(answer):
+# #     if not answer or len(answer.strip()) < 10:
+# #         return True
         
-#     bad_phrases = [
-#         "i don't know", "i am not sure", "mujhe nahi pata", 
-#         "i cannot determine", "context read ho gaya", "an ai language model",
-#         "i am sorry"
-#     ]
+# #     bad_phrases = [
+# #         "i don't know", "i am not sure", "mujhe nahi pata", 
+# #         "i cannot determine", "context read ho gaya", "an ai language model",
+# #         "i am sorry"
+# #     ]
     
-#     ans_lower = answer.lower()
-#     for phrase in bad_phrases:
-#         if phrase in ans_lower:
-#             return True
+# #     ans_lower = answer.lower()
+# #     for phrase in bad_phrases:
+# #         if phrase in ans_lower:
+# #             return True
             
-#     return False
+# #     return False
 
 
-# def smart_llm_router(messages, preferred_model="auto"):
-#     conf = get_llm_config()
+# # def smart_llm_router(messages, preferred_model="auto"):
+# #     conf = get_llm_config()
     
-#     # CASE 1: User strictly wants GROQ API
-#     if preferred_model == "groq":
-#         if conf.get("groq_api_key"):
-#             frappe.logger().info("[Classic Chatbot] User selected Groq API directly...")
-#             try:
-#                 groq_answer = call_groq(messages, conf)
-#                 return groq_answer, "☁️ Groq API (Manual)"
-#             except Exception as groq_err:
-#                 return f"Groq fail ho gaya. Error: {str(groq_err)}", "⚠️ Error"
-#         else:
-#             return "Groq select kiya par API Key configure nahi hai.", "⚠️ Error"
+# #     # CASE 1: User strictly wants GROQ API
+# #     if preferred_model == "groq":
+# #         if conf.get("groq_api_key"):
+# #             frappe.logger().info("[Classic Chatbot] User selected Groq API directly...")
+# #             try:
+# #                 groq_answer = call_groq(messages, conf)
+# #                 return groq_answer, "☁️ Groq API (Manual)"
+# #             except Exception as groq_err:
+# #                 return f"Groq fail ho gaya. Error: {str(groq_err)}", "⚠️ Error"
+# #         else:
+# #             return "Groq select kiya par API Key configure nahi hai.", "⚠️ Error"
 
-#     # CASE 2: User strictly wants LOCAL MODEL
-#     if preferred_model == "local":
-#         frappe.logger().info("[Classic Chatbot] User selected Local Model directly...")
-#         try:
-#             local_answer = call_ollama(messages, conf)
-#             return local_answer, "🖥️ Local Model (Strict)"
-#         except Exception as e:
-#             return f"Local server down hai. Error: {str(e)}", "⚠️ Error"
+# #     # CASE 2: User strictly wants LOCAL MODEL
+# #     if preferred_model == "local":
+# #         frappe.logger().info("[Classic Chatbot] User selected Local Model directly...")
+# #         try:
+# #             local_answer = call_ollama(messages, conf)
+# #             return local_answer, "🖥️ Local Model (Strict)"
+# #         except Exception as e:
+# #             return f"Local server down hai. Error: {str(e)}", "⚠️ Error"
 
-#     # CASE 3: AUTO (Local First, Fallback to Groq)
-#     try:
-#         frappe.logger().info("[Classic Chatbot] Trying Local Model (Auto)...")
-#         local_answer = call_ollama(messages, conf)
+# #     # CASE 3: AUTO (Local First, Fallback to Groq)
+# #     try:
+# #         frappe.logger().info("[Classic Chatbot] Trying Local Model (Auto)...")
+# #         local_answer = call_ollama(messages, conf)
         
-#         if check_if_answer_is_poor(local_answer):
-#             frappe.logger().info("[Classic Chatbot] Local answer poor tha, Groq par switch kar rahe hain...")
-#             raise Exception("Poor Quality Answer from Local Model")
+# #         if check_if_answer_is_poor(local_answer):
+# #             frappe.logger().info("[Classic Chatbot] Local answer poor tha, Groq par switch kar rahe hain...")
+# #             raise Exception("Poor Quality Answer from Local Model")
             
-#         return local_answer, "🖥️ Local Model (Auto)"
+# #         return local_answer, "🖥️ Local Model (Auto)"
         
-#     except Exception as e:
-#         frappe.logger().error(f"[Classic Chatbot] Local Fallback Triggered: {e}")
+# #     except Exception as e:
+# #         frappe.logger().error(f"[Classic Chatbot] Local Fallback Triggered: {e}")
         
-#         if conf.get("groq_api_key"):
-#             frappe.logger().info("[Classic Chatbot] Calling Groq API via Auto Fallback...")
-#             try:
-#                 groq_answer = call_groq(messages, conf)
-#                 return groq_answer, "☁️ Groq API (Fallback)"
-#             except Exception as groq_err:
-#                 return f"Local aur Groq dono fail ho gaye. Error: {str(groq_err)}", "⚠️ Error"
-#         else:
-#             return f"Local model fail ho gaya aur Groq ki API key nahi mili. Local Error: {str(e)}", "⚠️ Error"
+# #         if conf.get("groq_api_key"):
+# #             frappe.logger().info("[Classic Chatbot] Calling Groq API via Auto Fallback...")
+# #             try:
+# #                 groq_answer = call_groq(messages, conf)
+# #                 return groq_answer, "☁️ Groq API (Fallback)"
+# #             except Exception as groq_err:
+# #                 return f"Local aur Groq dono fail ho gaye. Error: {str(groq_err)}", "⚠️ Error"
+# #         else:
+# #             return f"Local model fail ho gaya aur Groq ki API key nahi mili. Local Error: {str(e)}", "⚠️ Error"
 
 
-# def build_tool_plan(question, context):
-#     q = (question or "").lower()
+# # def build_tool_plan(question, context):
+# #     q = (question or "").lower()
 
-#     doctype = context.get("doctype")
-#     doc = context.get("doc")
-#     error = context.get("error")
-#     docname = context.get("docname")
+# #     doctype = context.get("doctype")
+# #     doc = context.get("doc")
+# #     error = context.get("error")
+# #     docname = context.get("docname")
 
-#     plan = []
+# #     plan = []
 
-#     if doctype:
-#         plan.append({
-#             "tool": "get_doctype_schema",
-#             "args": {
-#                 "doctype": doctype,
-#             },
-#         })
+# #     if doctype:
+# #         plan.append({
+# #             "tool": "get_doctype_schema",
+# #             "args": {
+# #                 "doctype": doctype,
+# #             },
+# #         })
 
-#     if doctype and isinstance(doc, dict):
-#         plan.append({
-#             "tool": "analyze_current_doc",
-#             "args": {
-#                 "doctype": doctype,
-#                 "doc": doc,
-#             },
-#         })
+# #     if doctype and isinstance(doc, dict):
+# #         plan.append({
+# #             "tool": "analyze_current_doc",
+# #             "args": {
+# #                 "doctype": doctype,
+# #                 "doc": doc,
+# #             },
+# #         })
 
-#     if error:
-#         plan.append({
-#             "tool": "explain_error",
-#             "args": {
-#                 "doctype": doctype,
-#                 "doc": doc,
-#                 "error": error,
-#             },
-#         })
+# #     if error:
+# #         plan.append({
+# #             "tool": "explain_error",
+# #             "args": {
+# #                 "doctype": doctype,
+# #                 "doc": doc,
+# #                 "error": error,
+# #             },
+# #         })
 
-#     field_hint = detect_field_from_question(question)
-#     if doctype and field_hint:
-#         plan.append({
-#             "tool": "get_field_help",
-#             "args": {
-#                 "doctype": doctype,
-#                 "fieldname": field_hint,
-#             },
-#         })
+# #     field_hint = detect_field_from_question(question)
+# #     if doctype and field_hint:
+# #         plan.append({
+# #             "tool": "get_field_help",
+# #             "args": {
+# #                 "doctype": doctype,
+# #                 "fieldname": field_hint,
+# #             },
+# #         })
 
-#     if doctype and docname and any(word in q for word in ["record", "document", "doc", "details", "data", "open"]):
-#         plan.append({
-#             "tool": "get_record",
-#             "args": {
-#                 "doctype": doctype,
-#                 "name": docname,
-#             },
-#         })
+# #     if doctype and docname and any(word in q for word in ["record", "document", "doc", "details", "data", "open"]):
+# #         plan.append({
+# #             "tool": "get_record",
+# #             "args": {
+# #                 "doctype": doctype,
+# #                 "name": docname,
+# #             },
+# #         })
 
-#     if doctype and any(word in q for word in ["link", "connect", "relation", "kis kis", "kaha use"]):
-#         plan.append({
-#             "tool": "get_linked_doctypes",
-#             "args": {
-#                 "doctype": doctype,
-#             },
-#         })
+# #     if doctype and any(word in q for word in ["link", "connect", "relation", "kis kis", "kaha use"]):
+# #         plan.append({
+# #             "tool": "get_linked_doctypes",
+# #             "args": {
+# #                 "doctype": doctype,
+# #             },
+# #         })
 
-#     return plan
+# #     return plan
 
 
-# def run_tool_plan(plan):
-#     outputs = []
+# # def run_tool_plan(plan):
+# #     outputs = []
 
-#     for step in plan:
-#         tool_name = step.get("tool")
-#         args = step.get("args") or {}
+# #     for step in plan:
+# #         tool_name = step.get("tool")
+# #         args = step.get("args") or {}
 
-#         if tool_name == "get_linked_doctypes":
-#             target_dt = args.get("doctype")
-#             try:
-#                 links = frappe.get_all("DocField", filters={"fieldtype": "Link", "options": target_dt}, pluck="parent")
-#                 custom_links = frappe.get_all("Custom Field", filters={"fieldtype": "Link", "options": target_dt}, pluck="dt")
-#                 unique_links = sorted(list(set(links + custom_links)))
+# #         if tool_name == "get_linked_doctypes":
+# #             target_dt = args.get("doctype")
+# #             try:
+# #                 links = frappe.get_all("DocField", filters={"fieldtype": "Link", "options": target_dt}, pluck="parent")
+# #                 custom_links = frappe.get_all("Custom Field", filters={"fieldtype": "Link", "options": target_dt}, pluck="dt")
+# #                 unique_links = sorted(list(set(links + custom_links)))
                 
-#                 result = {
-#                     "message": f"{target_dt} in doctypes ke sath link hai.",
-#                     "linked_doctypes": unique_links,
-#                     "total_links": len(unique_links)
-#                 }
-#             except Exception as e:
-#                 result = {"error": f"Links fetch karne me error aaya: {str(e)}"}
-#         else:
-#             result = run_tool(tool_name, args)
+# #                 result = {
+# #                     "message": f"{target_dt} in doctypes ke sath link hai.",
+# #                     "linked_doctypes": unique_links,
+# #                     "total_links": len(unique_links)
+# #                 }
+# #             except Exception as e:
+# #                 result = {"error": f"Links fetch karne me error aaya: {str(e)}"}
+# #         else:
+# #             result = run_tool(tool_name, args)
 
-#         outputs.append({
-#             "tool": tool_name,
-#             "args": args,
-#             "result": result,
-#         })
+# #         outputs.append({
+# #             "tool": tool_name,
+# #             "args": args,
+# #             "result": result,
+# #         })
 
-#     return outputs
-
-
-# def fallback_answer(question, context, tool_outputs):
-#     doctype = context.get("doctype")
-#     error = context.get("error")
-
-#     lines = []
-
-#     if doctype:
-#         lines.append(f"Aap abhi **{doctype}** DocType par ho.")
-
-#     for item in tool_outputs:
-#         if item.get("tool") == "analyze_current_doc":
-#             result = item.get("result") or {}
-#             missing = result.get("missing_required") or []
-#             invalid_links = result.get("invalid_links") or []
-
-#             if missing:
-#                 lines.append("")
-#                 lines.append("Mandatory fields missing lag rahi hain:")
-#                 for row in missing:
-#                     lines.append(f"- {row.get('label')} ({row.get('fieldname')})")
-
-#             if invalid_links:
-#                 lines.append("")
-#                 lines.append("Invalid link values mil rahe hain:")
-#                 for row in invalid_links:
-#                     lines.append(
-#                         f"- {row.get('label')}: {row.get('value')} not found in {row.get('linked_doctype')}"
-#                     )
-
-#     if error:
-#         lines.append("")
-#         lines.append(f"Last error: {error}")
-
-#     if not lines:
-#         lines.append("Context read ho gaya, lekin specific issue detect nahi hua. Question thoda detail me likho.")
-
-#     return "\n".join(lines)
+# #     return outputs
 
 
-# @frappe.whitelist()
-# def ask(question, doctype=None, docname=None, doc=None, route=None, error=None, preferred_model="auto"):
-#     if not question:
-#         frappe.throw("Question is required")
+# # def fallback_answer(question, context, tool_outputs):
+# #     doctype = context.get("doctype")
+# #     error = context.get("error")
 
-#     context = {
-#         "doctype": doctype,
-#         "docname": docname,
-#         "doc": clean_doc(safe_json(doc, {})),
-#         "route": safe_json(route, []),
-#         "error": error,
-#         "user": frappe.session.user,
-#     }
+# #     lines = []
 
-#     plan = build_tool_plan(question, context)
-#     tool_outputs = run_tool_plan(plan)
+# #     if doctype:
+# #         lines.append(f"Aap abhi **{doctype}** DocType par ho.")
 
-#     model_used = "System"
-#     try:
-#         messages = build_enterprise_prompt(question, context, tool_outputs)
-#         answer, model_used = smart_llm_router(messages, preferred_model)
-#     except Exception as e:
-#         answer = fallback_answer(question, context, tool_outputs)
-#         answer += f"\n\nAI model connect nahi hua: {str(e)}"
-#         model_used = "⚙️ Fallback Rule"
+# #     for item in tool_outputs:
+# #         if item.get("tool") == "analyze_current_doc":
+# #             result = item.get("result") or {}
+# #             missing = result.get("missing_required") or []
+# #             invalid_links = result.get("invalid_links") or []
 
-#     return {
-#         "answer": answer,
-#         "model_used": model_used, 
-#         "tools_used": [step.get("tool") for step in plan],
-#     }
+# #             if missing:
+# #                 lines.append("")
+# #                 lines.append("Mandatory fields missing lag rahi hain:")
+# #                 for row in missing:
+# #                     lines.append(f"- {row.get('label')} ({row.get('fieldname')})")
+
+# #             if invalid_links:
+# #                 lines.append("")
+# #                 lines.append("Invalid link values mil rahe hain:")
+# #                 for row in invalid_links:
+# #                     lines.append(
+# #                         f"- {row.get('label')}: {row.get('value')} not found in {row.get('linked_doctype')}"
+# #                     )
+
+# #     if error:
+# #         lines.append("")
+# #         lines.append(f"Last error: {error}")
+
+# #     if not lines:
+# #         lines.append("Context read ho gaya, lekin specific issue detect nahi hua. Question thoda detail me likho.")
+
+# #     return "\n".join(lines)
 
 
-# @frappe.whitelist()
-# def inspect_current_context(doctype=None, docname=None, doc=None, route=None, error=None):
-#     context = {
-#         "doctype": doctype,
-#         "docname": docname,
-#         "doc": clean_doc(safe_json(doc, {})),
-#         "route": safe_json(route, []),
-#         "error": error,
-#         "user": frappe.session.user,
-#     }
+# # @frappe.whitelist()
+# # def ask(question, doctype=None, docname=None, doc=None, route=None, error=None, preferred_model="auto"):
+# #     if not question:
+# #         frappe.throw("Question is required")
 
-#     plan = build_tool_plan("analyze current form", context)
-#     outputs = run_tool_plan(plan)
+# #     context = {
+# #         "doctype": doctype,
+# #         "docname": docname,
+# #         "doc": clean_doc(safe_json(doc, {})),
+# #         "route": safe_json(route, []),
+# #         "error": error,
+# #         "user": frappe.session.user,
+# #     }
 
-#     return {
-#         "context": context,
-#         "tools_used": [p.get("tool") for p in plan],
-#         "tool_outputs": outputs,
-#     }
+# #     plan = build_tool_plan(question, context)
+# #     tool_outputs = run_tool_plan(plan)
+
+# #     model_used = "System"
+# #     try:
+# #         messages = build_enterprise_prompt(question, context, tool_outputs)
+# #         answer, model_used = smart_llm_router(messages, preferred_model)
+# #     except Exception as e:
+# #         answer = fallback_answer(question, context, tool_outputs)
+# #         answer += f"\n\nAI model connect nahi hua: {str(e)}"
+# #         model_used = "⚙️ Fallback Rule"
+
+# #     return {
+# #         "answer": answer,
+# #         "model_used": model_used, 
+# #         "tools_used": [step.get("tool") for step in plan],
+# #     }
+
+
+# # @frappe.whitelist()
+# # def inspect_current_context(doctype=None, docname=None, doc=None, route=None, error=None):
+# #     context = {
+# #         "doctype": doctype,
+# #         "docname": docname,
+# #         "doc": clean_doc(safe_json(doc, {})),
+# #         "route": safe_json(route, []),
+# #         "error": error,
+# #         "user": frappe.session.user,
+# #     }
+
+# #     plan = build_tool_plan("analyze current form", context)
+# #     outputs = run_tool_plan(plan)
+
+# #     return {
+# #         "context": context,
+# #         "tools_used": [p.get("tool") for p in plan],
+# #         "tool_outputs": outputs,
+# #     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -739,68 +796,491 @@ AGENT_TOOLS = [
 
 def get_llm_config():
     return {
-        "local_model": frappe.conf.get("classic_chatbot_local_model") or "qwen2.5:3b-instruct",
-        "local_base_url": frappe.conf.get("classic_chatbot_local_url") or "http://localhost:11434",
-        "groq_api_key": frappe.conf.get("classic_chatbot_groq_api_key"),
-        "groq_model": frappe.conf.get("classic_chatbot_groq_model") or "llama-3.3-70b-versatile",
-        "temperature": float(frappe.conf.get("classic_chatbot_temperature") or 0.05),
-        "max_catalog_chars": int(frappe.conf.get("classic_chatbot_max_catalog_chars") or 22000),
-        "max_schema_chars": int(frappe.conf.get("classic_chatbot_max_schema_chars") or 18000),
-        "max_result_rows": int(frappe.conf.get("classic_chatbot_max_result_rows") or 50),
-        "max_count_scan_rows": int(frappe.conf.get("classic_chatbot_max_count_scan_rows") or 50000),
+        "local_model": (
+            frappe.conf.get(
+                "classic_chatbot_local_model"
+            )
+            or "qwen2.5:7b-instruct"
+        ),
+
+        "local_base_url": (
+            frappe.conf.get(
+                "classic_chatbot_local_url"
+            )
+            or "http://127.0.0.1:11434"
+        ),
+
+        "local_timeout": int(
+            frappe.conf.get(
+                "classic_chatbot_local_timeout"
+            )
+            or 120
+        ),
+
+        "keep_alive": (
+            frappe.conf.get(
+                "classic_chatbot_keep_alive"
+            )
+            or "1h"
+        ),
+
+        # 2048 is too small for schema planning.
+        "num_ctx": int(
+            frappe.conf.get(
+                "classic_chatbot_num_ctx"
+            )
+            or 4096
+        ),
+
+        "num_predict": int(
+            frappe.conf.get(
+                "classic_chatbot_num_predict"
+            )
+            or 300
+        ),
+
+        "temperature": float(
+            frappe.conf.get(
+                "classic_chatbot_temperature"
+            )
+            or 0.0
+        ),
+
+        "groq_api_key": frappe.conf.get(
+            "classic_chatbot_groq_api_key"
+        ),
+
+        "groq_model": (
+            frappe.conf.get(
+                "classic_chatbot_groq_model"
+            )
+            or "llama-3.3-70b-versatile"
+        ),
+
+        # Compact prompts only.
+        "max_catalog_chars": int(
+            frappe.conf.get(
+                "classic_chatbot_max_catalog_chars"
+            )
+            or 7000
+        ),
+
+        "max_schema_chars": int(
+            frappe.conf.get(
+                "classic_chatbot_max_schema_chars"
+            )
+            or 9000
+        ),
+
+        "max_result_rows": int(
+            frappe.conf.get(
+                "classic_chatbot_max_result_rows"
+            )
+            or 50
+        ),
+
+        "max_count_scan_rows": int(
+            frappe.conf.get(
+                "classic_chatbot_max_count_scan_rows"
+            )
+            or 500000
+        ),
     }
-
-
-
-
 
 # Local Ollama server (localhost:11434) ko HTTP request bhejta hai messages ke sath, 
 # aur model ka text response wapas laata hai. expect_json=True ho to Ollama ko force karta hai valid JSON hi dene ke liye.
-def call_ollama(messages, conf=None, timeout=45, expect_json=False):   # timeout 25 -> 45 (7B thoda slow hota hai)
+
+
+def call_ollama(
+    messages,
+    conf=None,
+    timeout=None,
+    expect_json=False,
+):
+    """
+    Send a context-safe request to local Ollama.
+    """
+
     conf = conf or get_llm_config()
-    url = conf["local_base_url"].rstrip("/") + "/api/chat"
+
+    local_model = (
+        conf.get("local_model")
+        or "qwen2.5:7b-instruct"
+    )
+
+    local_base_url = (
+        conf.get("local_base_url")
+        or "http://127.0.0.1:11434"
+    ).rstrip("/")
+
+    request_timeout = (
+        int(timeout)
+        if timeout is not None
+        else int(
+            conf.get("local_timeout")
+            or 120
+        )
+    )
+
+    num_ctx = max(
+        int(conf.get("num_ctx") or 4096),
+        1024,
+    )
+
+    num_predict = max(
+        int(conf.get("num_predict") or 300),
+        50,
+    )
+
+    safe_messages = fit_messages_to_context(
+        messages=messages or [],
+        num_ctx=num_ctx,
+        num_predict=num_predict,
+    )
+
     payload = {
-        "model": conf["local_model"],
-        "messages": messages,
+        "model": local_model,
+        "messages": safe_messages,
         "stream": False,
+        "keep_alive": (
+            conf.get("keep_alive")
+            or "1h"
+        ),
         "options": {
-            "temperature": conf["temperature"],
-            "num_ctx": 8192,
+            "temperature": float(
+                conf.get("temperature")
+                or 0.0
+            ),
+            "num_ctx": num_ctx,
+            "num_predict": num_predict,
+            "top_p": 0.9,
+            "repeat_penalty": 1.05,
         },
     }
+
     if expect_json:
-        payload["format"] = "json"    # <- YE NAYI LINE: Ollama guaranteed valid JSON dega
-    response = requests.post(url, json=payload, timeout=timeout)
-    response.raise_for_status()
-    data = response.json()
-    return data.get("message", {}).get("content") or data.get("response") or ""
+        payload["format"] = "json"
+
+    response = None
+    url = f"{local_base_url}/api/chat"
+
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            timeout=request_timeout,
+        )
+
+        response.raise_for_status()
+
+    except requests.exceptions.Timeout as exc:
+        frappe.log_error(
+            message=(
+                f"Model: {local_model}\n"
+                f"URL: {url}\n"
+                f"Timeout: {request_timeout}\n"
+                f"Estimated prompt tokens: "
+                f"{estimate_message_tokens(safe_messages)}\n\n"
+                f"{frappe.get_traceback()}"
+            ),
+            title="Classic Chatbot Ollama Timeout",
+        )
+
+        raise RuntimeError(
+            "Local model response timeout ho gaya."
+        ) from exc
+
+    except requests.exceptions.ConnectionError as exc:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Classic Chatbot Ollama Connection Error",
+        )
+
+        raise RuntimeError(
+            "Ollama server se connection nahi ho raha."
+        ) from exc
+
+    except requests.exceptions.HTTPError as exc:
+        status_code = (
+            response.status_code
+            if response is not None
+            else "Unknown"
+        )
+
+        error_text = (
+            response.text[:2000]
+            if response is not None
+            else ""
+        )
+
+        frappe.log_error(
+            message=(
+                f"Model: {local_model}\n"
+                f"URL: {url}\n"
+                f"Status: {status_code}\n"
+                f"Estimated prompt tokens: "
+                f"{estimate_message_tokens(safe_messages)}\n"
+                f"Response: {error_text}"
+            ),
+            title="Classic Chatbot Ollama HTTP Error",
+        )
+
+        if status_code == 404:
+            raise RuntimeError(
+                f"Ollama model `{local_model}` installed nahi hai."
+            ) from exc
+
+        if (
+            status_code == 400
+            and "context" in error_text.lower()
+        ):
+            raise RuntimeError(
+                "Prompt model context se bada tha. "
+                "Request automatically stop kar di gayi."
+            ) from exc
+
+        raise RuntimeError(
+            "Ollama API error. "
+            f"Status: {status_code}. "
+            f"Details: {error_text or 'No details'}"
+        ) from exc
+
+    except requests.exceptions.RequestException as exc:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Classic Chatbot Ollama Request Error",
+        )
+
+        raise RuntimeError(
+            f"Ollama request fail ho gayi: {exc}"
+        ) from exc
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise RuntimeError(
+            "Ollama ne valid JSON response nahi diya."
+        ) from exc
+
+    if data.get("error"):
+        raise RuntimeError(
+            f"Ollama error: {data.get('error')}"
+        )
+
+    message = data.get("message") or {}
+
+    return str(
+        message.get("content")
+        or data.get("response")
+        or ""
+    ).strip()
 
 
+def call_ollama_with_tools(
+    messages,
+    tools=None,
+    conf=None,
+    timeout=None,
+):
+    """
+    Send a tool-enabled request to the configured local Ollama model.
 
+    Returns:
+        dict: Complete Ollama assistant message, including tool_calls.
+    """
+
+    conf = conf or get_llm_config()
+
+    local_model = (
+        conf.get("local_model")
+        or "llama3:latest"
+    )
+
+    local_base_url = (
+        conf.get("local_base_url")
+        or "http://127.0.0.1:11434"
+    ).rstrip("/")
+
+    request_timeout = (
+        int(timeout)
+        if timeout is not None
+        else int(conf.get("local_timeout") or 180)
+    )
+
+    keep_alive = (
+        conf.get("keep_alive")
+        or "30m"
+    )
+
+    temperature = float(
+        conf.get("temperature") or 0.05
+    )
+
+    num_ctx = int(
+        conf.get("num_ctx") or 4096
+    )
+
+    num_predict = int(
+        conf.get("num_predict") or 600
+    )
+
+    url = f"{local_base_url}/api/chat"
+
+    payload = {
+        "model": local_model,
+        "messages": messages or [],
+        "stream": False,
+        "keep_alive": keep_alive,
+        "options": {
+            "temperature": temperature,
+            "num_ctx": num_ctx,
+            "num_predict": num_predict,
+            "top_p": 0.90,
+            "repeat_penalty": 1.05,
+        },
+    }
+
+    if tools:
+        payload["tools"] = tools
+
+    response = None
+
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            timeout=request_timeout,
+        )
+
+        response.raise_for_status()
+
+    except requests.exceptions.Timeout as exc:
+        frappe.log_error(
+            message=(
+                f"Model: {local_model}\n"
+                f"URL: {url}\n"
+                f"Timeout: {request_timeout} seconds\n\n"
+                f"{frappe.get_traceback()}"
+            ),
+            title="Classic Chatbot Ollama Tool Timeout",
+        )
+
+        raise Exception(
+            f"Local model `{local_model}` ka tool-call "
+            f"{request_timeout} seconds me complete nahi hua."
+        ) from exc
+
+    except requests.exceptions.ConnectionError as exc:
+        frappe.log_error(
+            message=(
+                f"Model: {local_model}\n"
+                f"URL: {url}\n\n"
+                f"{frappe.get_traceback()}"
+            ),
+            title="Classic Chatbot Ollama Connection Error",
+        )
+
+        raise Exception(
+            "Ollama server se connection nahi ho raha. "
+            f"Configured URL: {local_base_url}."
+        ) from exc
+
+    except requests.exceptions.HTTPError as exc:
+        status_code = (
+            response.status_code
+            if response is not None
+            else "Unknown"
+        )
+
+        error_text = ""
+
+        if response is not None:
+            try:
+                error_text = response.text[:2000]
+            except Exception:
+                pass
+
+        frappe.log_error(
+            message=(
+                f"Model: {local_model}\n"
+                f"URL: {url}\n"
+                f"Status: {status_code}\n"
+                f"Response: {error_text}\n\n"
+                f"{frappe.get_traceback()}"
+            ),
+            title="Classic Chatbot Ollama Tool HTTP Error",
+        )
+
+        if status_code == 404:
+            raise Exception(
+                f"Ollama model `{local_model}` nahi mila. "
+                f"`ollama pull {local_model}` run karein."
+            ) from exc
+
+        raise Exception(
+            "Ollama tool API error aaya. "
+            f"Status: {status_code}. "
+            f"Details: {error_text or 'No details'}"
+        ) from exc
+
+    except requests.exceptions.RequestException as exc:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title="Classic Chatbot Ollama Tool Request Error",
+        )
+
+        raise Exception(
+            f"Ollama tool request fail ho gayi: {str(exc)}"
+        ) from exc
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        response_text = ""
+
+        try:
+            response_text = response.text[:2000]
+        except Exception:
+            pass
+
+        raise Exception(
+            "Ollama ne valid JSON response nahi diya. "
+            f"Response: {response_text or 'Empty response'}"
+        ) from exc
+
+    if data.get("error"):
+        raise Exception(
+            f"Ollama error: {data.get('error')}"
+        )
+
+    message = data.get("message")
+
+    if not isinstance(message, dict):
+        frappe.log_error(
+            message=(
+                f"Model: {local_model}\n"
+                f"Full response: "
+                f"{json.dumps(data, ensure_ascii=False, default=str)[:3000]}"
+            ),
+            title="Classic Chatbot Missing Ollama Message",
+        )
+
+        raise Exception(
+            "Ollama response me assistant message nahi mila."
+        )
+
+    message.setdefault("role", "assistant")
+    message.setdefault("content", "")
+
+    tool_calls = message.get("tool_calls")
+
+    if tool_calls is not None and not isinstance(tool_calls, list):
+        message["tool_calls"] = []
+
+    return message
 
 # Same Call_ollama ki tarah tools bhi payload me bhejta hai — matlab model tool call request kar sakta hai.
 # Ye pura message object return karta hai (jisme tool_calls ho sakte hain), sirf text nahi.
-
-def call_ollama_with_tools(messages, tools=None, conf=None, timeout=60):
-    conf = conf or get_llm_config()
-    url = conf["local_base_url"].rstrip("/") + "/api/chat"
-    payload = {
-        "model": conf["local_model"],
-        "messages": messages,
-        "stream": False,
-        "options": {"temperature": conf["temperature"], "num_ctx": 8192},
-    }
-    if tools:
-        payload["tools"] = tools
-    response = requests.post(url, json=payload, timeout=timeout)
-    response.raise_for_status()
-    return response.json().get("message", {})
-
-
-
-
-# Bilkul same kaam, bas Ollama ki jagah Groq cloud API (llama-3.3-70b) use karta hai.
-# API key header me jati hai. _with_tools wala version tool calling support karta hai.
 def call_groq(messages, conf=None, timeout=45, expect_json=False):
     conf = conf or get_llm_config()
     if not conf.get("groq_api_key"):
@@ -857,26 +1337,178 @@ def call_groq_with_tools(messages, tools=None, conf=None, timeout=60):
 
 
 # Ye router hai — decide karta hai Groq use karna hai ya local:
-def llm_chat(messages, preferred_model="auto", expect_json=False):
+def llm_chat(
+    messages,
+    preferred_model="auto",
+    expect_json=False,
+):
+    """
+    Model router.
+
+    preferred_model:
+        local -> only local Ollama
+        groq  -> only Groq
+        auto  -> local first, optional Groq fallback
+    """
+
     conf = get_llm_config()
 
     if preferred_model == "groq":
-        return call_groq(messages, conf, expect_json=expect_json), "☁️ Groq API"
+        text = call_groq(
+            messages,
+            conf=conf,
+            timeout=60,
+            expect_json=expect_json,
+        )
+
+        return (
+            text,
+            f"☁️ Groq API · {conf['groq_model']}",
+        )
 
     if preferred_model == "local":
-        return call_ollama(messages, conf, timeout=45, expect_json=expect_json), "🖥️ Local Model"
+        text = call_ollama(
+            messages,
+            conf=conf,
+            timeout=conf["local_timeout"],
+            expect_json=expect_json,
+        )
 
-    # auto: Groq pehle (fast), local fallback
-    if conf.get("groq_api_key"):
-        try:
-            return call_groq(messages, conf, expect_json=expect_json), "☁️ Groq (Auto)"
-        except Exception:
-            frappe.log_error(frappe.get_traceback(), "Classic Chatbot Groq Error - Local Fallback")
+        if not text:
+            raise Exception(
+                "Local model ne empty response diya."
+            )
 
-    text = call_ollama(messages, conf, timeout=45, expect_json=expect_json)
-    if not text or len(text.strip()) < 3:
-        raise Exception("Local model ne empty response diya. Ollama check karo.")
-    return text, "🖥️ Local Model (Fallback)"
+        return (
+            text,
+            f"🖥️ Local Ollama · {conf['local_model']}",
+        )
+
+    # Auto mode: local Ollama first
+    try:
+        text = call_ollama(
+            messages,
+            conf=conf,
+            timeout=conf["local_timeout"],
+            expect_json=expect_json,
+        )
+
+        if not text or len(text.strip()) < 2:
+            raise Exception(
+                "Local model ne empty response diya."
+            )
+
+        return (
+            text,
+            f"🖥️ Local Ollama · {conf['local_model']}",
+        )
+
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Classic Chatbot Local Model Error",
+        )
+
+        if conf.get("groq_api_key"):
+            text = call_groq(
+                messages,
+                conf=conf,
+                timeout=60,
+                expect_json=expect_json,
+            )
+
+            return (
+                text,
+                f"☁️ Groq Fallback · {conf['groq_model']}",
+            )
+
+        raise
+
+
+
+
+
+
+
+
+
+
+def llm_chat_with_tools(
+    messages,
+    tools=None,
+    preferred_model="auto",
+):
+    """
+    Tool-enabled model router.
+    """
+
+    conf = get_llm_config()
+
+    if preferred_model == "groq":
+        message = call_groq_with_tools(
+            messages,
+            tools=tools,
+            conf=conf,
+            timeout=60,
+        )
+
+        return (
+            message,
+            f"☁️ Groq API · {conf['groq_model']}",
+        )
+
+    if preferred_model == "local":
+        message = call_ollama_with_tools(
+            messages,
+            tools=tools,
+            conf=conf,
+            timeout=conf["local_timeout"],
+        )
+
+        return (
+            message,
+            f"🖥️ Local Ollama · {conf['local_model']}",
+        )
+
+    try:
+        message = call_ollama_with_tools(
+            messages,
+            tools=tools,
+            conf=conf,
+            timeout=conf["local_timeout"],
+        )
+
+        return (
+            message,
+            f"🖥️ Local Ollama · {conf['local_model']}",
+        )
+
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Classic Chatbot Local Tool Model Error",
+        )
+
+        if conf.get("groq_api_key"):
+            message = call_groq_with_tools(
+                messages,
+                tools=tools,
+                conf=conf,
+                timeout=60,
+            )
+
+            return (
+                message,
+                f"☁️ Groq Fallback · {conf['groq_model']}",
+            )
+
+        raise
+
+
+
+
+
+
 
 
 # -----------------------------
@@ -936,6 +1568,80 @@ def truncate_text(text, max_chars):
     if len(text) <= max_chars:
         return text
     return text[:max_chars] + "\n...[TRUNCATED]"
+
+
+
+def estimate_message_tokens(messages):
+    """
+    Conservative approximate token count.
+
+    English/code/JSON ke liye around 4 characters per token hota hai.
+    Safety ke liye 3 characters per token use kar rahe hain.
+    """
+
+    total_chars = 0
+
+    for message in messages or []:
+        if not isinstance(message, dict):
+            continue
+
+        total_chars += len(
+            str(message.get("role") or "")
+        )
+
+        total_chars += len(
+            str(message.get("content") or "")
+        )
+
+        total_chars += 20
+
+    return max(
+        1,
+        total_chars // 3,
+    )
+
+
+def fit_messages_to_context(
+    messages,
+    num_ctx,
+    num_predict,
+    minimum_output_reserve=150,
+):
+    """
+    Validate that request fits before calling Ollama.
+
+    This prevents Ollama 400:
+    request exceeds available context size.
+    """
+
+    context_size = max(
+        safe_int(num_ctx, 4096),
+        1024,
+    )
+
+    output_reserve = max(
+        safe_int(num_predict, 300),
+        minimum_output_reserve,
+    )
+
+    input_limit = max(
+        context_size - output_reserve - 200,
+        500,
+    )
+
+    estimated_input_tokens = (
+        estimate_message_tokens(messages)
+    )
+
+    if estimated_input_tokens <= input_limit:
+        return messages
+
+    raise ValueError(
+        "Model prompt context se bada hai. "
+        f"Estimated input tokens: {estimated_input_tokens}, "
+        f"allowed input tokens: {input_limit}. "
+        "Schema/payload ko compact karna zaroori hai."
+    )
 
 
 # Based on the provided data," jaise faltu prefixes hata deta hai
@@ -1046,93 +1752,326 @@ def get_schema_for_doctype(doctype):
 
 
 
+def compact_schema_for_prompt(
+    schema,
+    max_fields=60,
+):
+    """
+    Create a small schema representation for the planner.
+
+    Complete descriptions, hidden fields and unnecessary metadata
+    model ko nahi bheji jati.
+    """
+
+    if not isinstance(schema, dict):
+        return None
+
+    compact_fields = []
+
+    for field in schema.get("fields") or []:
+        if not isinstance(field, dict):
+            continue
+
+        fieldname = normalize_space(
+            field.get("fieldname")
+        )
+
+        if not fieldname:
+            continue
+
+        if field.get("hidden"):
+            continue
+
+        compact_field = {
+            "fieldname": fieldname,
+            "label": normalize_space(
+                field.get("label")
+            )[:80],
+            "fieldtype": normalize_space(
+                field.get("fieldtype")
+            ),
+        }
+
+        options = normalize_space(
+            field.get("options")
+        )
+
+        if options:
+            compact_field["options"] = (
+                options[:100]
+            )
+
+        compact_fields.append(
+            compact_field
+        )
+
+        if len(compact_fields) >= max_fields:
+            break
+
+    return {
+        "doctype": schema.get("doctype"),
+        "title_field": schema.get(
+            "title_field"
+        ),
+        "search_fields": (
+            schema.get("search_fields")
+            or []
+        )[:8],
+        "fields": compact_fields,
+    }
+
+
+def compact_schema_bundle_for_prompt(
+    schema_bundle,
+):
+    compact_schemas = []
+
+    for schema in (
+        schema_bundle.get("schemas")
+        or []
+    ):
+        compact = compact_schema_for_prompt(
+            schema
+        )
+
+        if compact:
+            compact_schemas.append(compact)
+
+    return {
+        "selected_doctypes": (
+            schema_bundle.get(
+                "selected_doctypes"
+            )
+            or []
+        ),
+        "schemas": compact_schemas,
+    }
+
+
+
+
+
 # Catalog nikalta hai
 # LLM ko question + catalog deta hai: "in me se 1-5 relevant DocTypes choose karo"
 # LLM ka jawab validate karta hai (kya ye DocType sach me exist karta hai?)
 # Fallbacks: LLM fail ho to (a) active screen ka DocType use karo, (b) question me DocType ka naam directly match karo
 # Selected DocTypes ke schemas load karke return karta hai
-def get_relevant_schema(question, context=None, preferred_model="auto"):
+def get_relevant_schema(
+    question,
+    context=None,
+    preferred_model="auto",
+):
     """
-    Step 1: LLM reads the actual DocType catalog and selects relevant DocTypes.
-    Then backend loads only those schemas.
+    Select relevant live DocType schemas.
+
+    Fast path:
+    - Current form/list DocType available ho to uska schema directly use karo.
+    - All-DocType catalog aur LLM routing skip ho jati hai.
+
+    Generic path:
+    - Active DocType absent ho tab dynamic catalog routing chalegi.
     """
-    conf = get_llm_config()
+
     context = context or {}
+
+    active_doctype = normalize_space(
+        context.get("doctype")
+    )
+
+    # ---------------------------------------------------------
+    # FAST PATH: current screen already tells us the DocType
+    # ---------------------------------------------------------
+
+    if (
+        active_doctype
+        and frappe.db.exists(
+            "DocType",
+            active_doctype,
+        )
+    ):
+        schema = get_schema_for_doctype(
+            active_doctype
+        )
+
+        return {
+            "selected_doctypes": [
+                active_doctype
+            ],
+            "schemas": (
+                [schema]
+                if schema
+                else []
+            ),
+            "router_reason": (
+                "Active screen DocType used directly."
+            ),
+        }
+
+    # ---------------------------------------------------------
+    # GENERIC PATH: no active DocType available
+    # ---------------------------------------------------------
+
+    conf = get_llm_config()
+
     catalog = get_doctype_catalog()
 
-    # Add active screen doctype as hint but do not force it.
-    active_doctype = context.get("doctype")
+    compact_catalog = []
+
+    for row in catalog:
+        compact_catalog.append({
+            "doctype": row.get("doctype"),
+            "module": row.get("module"),
+            "title_field": row.get(
+                "title_field"
+            ),
+            "description": truncate_text(
+                row.get("description"),
+                80,
+            ),
+        })
+
     catalog_payload = {
-        "user_question": question,
-        "active_screen_doctype": active_doctype,
-        "doctype_catalog": catalog,
+        "user_question": normalize_space(
+            question
+        ),
+        "doctype_catalog": compact_catalog,
     }
 
-    system = """
-You are a Frappe/ERPNext schema router.
-Your job is only to choose relevant DocTypes from the provided actual DocType catalog.
+    system_prompt = """
+You are a Frappe DocType router.
+
+Select only the actual DocTypes needed to answer the user's question.
 
 Rules:
-- Do NOT invent DocTypes.
-- Choose 1 to 5 DocTypes only.
-- Prefer exact user wording, labels, modules, and active screen context.
-- If user asks about current form, include active_screen_doctype.
-- Return JSON only.
+1. Use only DocTypes supplied in the catalog.
+2. Never invent a DocType.
+3. Select maximum 3 DocTypes.
+4. Return JSON only.
 
-JSON format:
+Format:
 {
-  "doctypes": ["DocType 1", "DocType 2"],
+  "doctypes": ["Exact DocType"],
   "reason": "short reason"
 }
-"""
+""".strip()
 
-    user = truncate_text(json.dumps(catalog_payload, ensure_ascii=False, default=str), conf["max_catalog_chars"])
+    router_conf = conf.copy()
+
+    router_conf["num_ctx"] = min(
+        safe_int(
+            conf.get("num_ctx"),
+            2048,
+        ),
+        1536,
+    )
+
+    router_conf["num_predict"] = 100
+    router_conf["temperature"] = 0.0
+
+    selected_data = {}
 
     try:
-        raw, model_used = llm_chat(
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            preferred_model=preferred_model,
+        raw = call_ollama(
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                {
+                    "role": "user",
+                    "content": 
+                        truncate_text(
+                        json.dumps(
+                            catalog_payload,
+                            ensure_ascii=False,
+                            default=str,
+                        ),
+                        
+                            6000
+                        
+                    ),
+                },
+            ],
+            conf=router_conf,
+            timeout=45,
             expect_json=True,
         )
-        data = extract_json_object(raw)
-    except Exception as e:
-        frappe.log_error(frappe.get_traceback(), "Classic Chatbot Schema Router Error")
-        data = {}
 
-    selected = data.get("doctypes") or []
+        selected_data = (
+            extract_json_object(raw)
+        )
+
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Classic Chatbot Schema Router Error",
+        )
+
+    selected = (
+        selected_data.get("doctypes")
+        or []
+    )
+
     if isinstance(selected, str):
         selected = [selected]
 
-    # Validate selected DocTypes
     valid_doctypes = []
-    for dt in selected:
-        dt = normalize_space(dt)
-        if dt and frappe.db.exists("DocType", dt) and dt not in valid_doctypes:
-            valid_doctypes.append(dt)
 
-    # Fallback: active screen doctype if available
-    if not valid_doctypes and active_doctype and frappe.db.exists("DocType", active_doctype):
-        valid_doctypes.append(active_doctype)
+    for doctype in selected:
+        doctype = normalize_space(
+            doctype
+        )
 
-    # Fallback: very light dynamic phrase match from catalog, not hardcoded
+        if (
+            doctype
+            and frappe.db.exists(
+                "DocType",
+                doctype,
+            )
+            and doctype
+            not in valid_doctypes
+        ):
+            valid_doctypes.append(
+                doctype
+            )
+
+    # Dynamic exact-name fallback without business hardcoding.
     if not valid_doctypes:
-        q = (question or "").lower()
-        for item in catalog:
-            dt = item["doctype"]
-            if dt.lower() in q:
-                valid_doctypes.append(dt)
+        question_lower = normalize_space(
+            question
+        ).lower()
+
+        for row in catalog:
+            doctype = row.get("doctype")
+
+            if (
+                doctype
+                and doctype.lower()
+                in question_lower
+            ):
+                valid_doctypes.append(
+                    doctype
+                )
                 break
 
     schemas = []
-    for dt in valid_doctypes[:5]:
-        schema = get_schema_for_doctype(dt)
+
+    for doctype in valid_doctypes[:3]:
+        schema = get_schema_for_doctype(
+            doctype
+        )
+
         if schema:
             schemas.append(schema)
 
     return {
-        "selected_doctypes": valid_doctypes[:5],
+        "selected_doctypes": (
+            valid_doctypes[:3]
+        ),
         "schemas": schemas,
-        "router_reason": data.get("reason"),
+        "router_reason": selected_data.get(
+            "reason"
+        ),
     }
 
 
@@ -1581,6 +2520,91 @@ def expand_text_search(filters, or_filters, schema):
 
 
 
+
+
+
+def permission_aware_count(
+    doctype,
+    filters=None,
+    or_filters=None,
+    order_by="modified desc",
+    page_size=5000,
+    maximum_rows=500000,
+):
+    """
+    Count permission-visible records safely using pagination.
+
+    frappe.get_list() user permissions apply karta hai.
+    Raw SQL aur ignore_permissions use nahi hota.
+
+    maximum_rows accidental extremely large scans ko rokta hai.
+    """
+
+    filters = filters or []
+    or_filters = or_filters or None
+
+    page_size = safe_int(page_size, 5000)
+    page_size = max(100, min(page_size, 10000))
+
+    maximum_rows = safe_int(
+        maximum_rows,
+        500000,
+    )
+    maximum_rows = max(
+        page_size,
+        maximum_rows,
+    )
+
+    total = 0
+    start = 0
+    sample_records = []
+
+    while total < maximum_rows:
+        remaining = maximum_rows - total
+        current_page_size = min(
+            page_size,
+            remaining,
+        )
+
+        rows = frappe.get_list(
+            doctype,
+            filters=filters,
+            or_filters=or_filters,
+            fields=["name"],
+            limit_start=start,
+            limit_page_length=current_page_size,
+            order_by=order_by,
+        )
+
+        row_count = len(rows)
+
+        if len(sample_records) < 10:
+            required = 10 - len(sample_records)
+            sample_records.extend(
+                rows[:required]
+            )
+
+        total += row_count
+
+        if row_count < current_page_size:
+            return {
+                "count": total,
+                "sample_records": sample_records,
+                "truncated": False,
+            }
+
+        start += row_count
+
+    return {
+        "count": total,
+        "sample_records": sample_records,
+        "truncated": True,
+    }
+
+
+
+
+
 # Validated plan ko actually chalata hai:
 # Clarification chahiye? → user se puchta hai 
 # Permission check — frappe.has_permission() — user ko read access hai ya nahi?
@@ -1594,66 +2618,195 @@ def expand_text_search(filters, or_filters, schema):
 # Key point: kabhi raw SQL nahi, sirf Frappe ka permission-aware ORM.
 def execute_safe_query_plan(plan, schema_bundle):
     """
-    Step 3: Execute only validated plan through Frappe get_list.
-    No raw SQL. No SQL functions in fields.
+    Execute a validated ERP query plan through permission-aware Frappe APIs.
+
+    Supported operations:
+    - count
+    - list
+    - get
+    - sum
+    - avg
+    - min
+    - max
+
+    Security:
+    - No raw SQL
+    - No ignore_permissions
+    - Fields and filters are schema validated
+    - User read permissions are respected
     """
+
     if not isinstance(plan, dict):
-        return {"ok": False, "error": "Invalid query plan."}
+        return {
+            "ok": False,
+            "error": "Invalid query plan.",
+        }
+
     if plan.get("needs_clarification"):
         return {
             "ok": False,
             "needs_clarification": True,
-            "clarifying_question": plan.get("clarifying_question") or "Kripaya apna sawaal thoda specific karein.",
-        }
-    operation = normalize_space(plan.get("operation") or "list").lower()
-    if operation not in ALLOWED_OPERATIONS:
-        operation = "list"
-    doctype = normalize_space(plan.get("doctype"))
-    schema = find_schema(schema_bundle, doctype)
-    if not schema:
-        return {"ok": False, "error": "Relevant DocType schema nahi mila."}
-    if not frappe.has_permission(doctype, "read"):
-        return {"ok": False, "error": f"Aapko {doctype} read karne ki permission nahi hai."}
-
-    filters, or_filters, dropped = sanitize_filters(plan, schema)
-
-    # SAFETY GUARD: Model ne filters bheje the par sab invalid nikle.
-    # Unfiltered query chala ke GALAT answer (poore table ka count) dene se
-    # better hai error dena - agent loop me model ye error dekh kar
-    # get_schema call karega aur sahi fieldname se retry karega.
-    if dropped and not filters and not or_filters:
-        return {
-            "ok": False,
-            "error": (
-                "Filters invalid the (galat fieldname ya format). "
-                "get_schema se sahi fieldnames dekh kar dobara query karein. "
-                f"Invalid filters count: {dropped}"
+            "clarifying_question": (
+                plan.get("clarifying_question")
+                or "Kripaya apna sawaal thoda specific karein."
             ),
         }
 
-    filters, or_filters = resolve_link_field_filters(filters, or_filters, schema)
-    filters, or_filters = expand_text_search(filters, or_filters, schema)
-    fields = sanitize_fields(plan, schema)
-    order_by = sanitize_order_by(plan.get("order_by"), schema)
-    limit = safe_int(plan.get("limit"), 10)
-    limit = max(1, min(limit, get_llm_config()["max_result_rows"]))
+    operation = normalize_space(
+        plan.get("operation")
+        or "list"
+    ).lower()
 
-    # Count safely. Frappe v16 rejects SQL functions in fields, so never use count(name).
-    if operation == "count":
-        rows = frappe.get_list(
+    if operation not in ALLOWED_OPERATIONS:
+        operation = "list"
+
+    doctype = normalize_space(
+        plan.get("doctype")
+    )
+
+    if not doctype:
+        return {
+            "ok": False,
+            "error": "DocType query plan me missing hai.",
+        }
+
+    schema = find_schema(
+        schema_bundle,
+        doctype,
+    )
+
+    if not schema:
+        return {
+            "ok": False,
+            "error": (
+                "Relevant DocType schema nahi mila."
+            ),
+        }
+
+    if not frappe.has_permission(
+        doctype,
+        "read",
+    ):
+        return {
+            "ok": False,
+            "error": (
+                f"Aapko {doctype} read karne ki "
+                "permission nahi hai."
+            ),
+        }
+
+    filters, or_filters, dropped = sanitize_filters(
+        plan,
+        schema,
+    )
+
+    original_filter_count = len(
+        normalize_filter_input(
+            plan.get("filters"),
             doctype,
-            filters=filters,
-            or_filters=or_filters or None,
-            fields=["name"],
-            limit_page_length=get_llm_config()["max_count_scan_rows"],
-            order_by=order_by,
         )
+    )
+
+    original_or_filter_count = len(
+        normalize_filter_input(
+            plan.get("or_filters"),
+            doctype,
+        )
+    )
+
+    had_requested_filters = bool(
+        original_filter_count
+        or original_or_filter_count
+    )
+
+    if (
+        had_requested_filters
+        and dropped
+        and not filters
+        and not or_filters
+    ):
+        return {
+            "ok": False,
+            "error": (
+                "Query ke saare filters invalid the. "
+                "Unfiltered query security ke liye nahi chalayi gayi. "
+                "get_schema tool se exact fieldnames dekh kar retry karein. "
+                f"Dropped filters: {dropped}"
+            ),
+        }
+
+    filters, or_filters = resolve_link_field_filters(
+        filters,
+        or_filters,
+        schema,
+    )
+
+    filters, or_filters = expand_text_search(
+        filters,
+        or_filters,
+        schema,
+    )
+
+    fields = sanitize_fields(
+        plan,
+        schema,
+    )
+
+    order_by = sanitize_order_by(
+        plan.get("order_by"),
+        schema,
+    )
+
+    config = get_llm_config()
+
+    limit = safe_int(
+        plan.get("limit"),
+        10,
+    )
+
+    limit = max(
+        1,
+        min(
+            limit,
+            config["max_result_rows"],
+        ),
+    )
+
+    # ---------------------------------------------------------
+    # Count
+    # ---------------------------------------------------------
+
+    if operation == "count":
+        count_result = permission_aware_count(
+            doctype=doctype,
+            filters=filters,
+            or_filters=or_filters,
+            order_by=order_by,
+            page_size=5000,
+            maximum_rows=max(
+                config["max_count_scan_rows"],
+                500000,
+            ),
+        )
+
         return {
             "ok": True,
             "operation": "count",
             "doctype": doctype,
-            "count": len(rows),
-            "sample_records": rows[:10],
+            "count": count_result["count"],
+            "sample_records": [
+                clean_record(row)
+                for row in count_result[
+                    "sample_records"
+                ]
+            ],
+            "truncated": count_result["truncated"],
+            "warning": (
+                "Count configured maximum limit tak pahunch gaya. "
+                "Actual count isse zyada ho sakta hai."
+                if count_result["truncated"]
+                else None
+            ),
             "plan": {
                 "filters": filters,
                 "or_filters": or_filters,
@@ -1662,76 +2815,215 @@ def execute_safe_query_plan(plan, schema_bundle):
             },
         }
 
-    # List/get records
+    # ---------------------------------------------------------
+    # List / Get
+    # ---------------------------------------------------------
+
     if operation in {"list", "get"}:
+        query_limit = (
+            1
+            if operation == "get"
+            else limit
+        )
+
         rows = frappe.get_list(
             doctype,
             filters=filters,
             or_filters=or_filters or None,
             fields=fields,
-            limit_page_length=1 if operation == "get" else limit,
+            limit_page_length=query_limit,
             order_by=order_by,
         )
+
+        cleaned_rows = [
+            clean_record(row)
+            for row in rows
+        ]
+
         return {
             "ok": True,
             "operation": operation,
             "doctype": doctype,
-            "records": [clean_record(r) for r in rows],
-            "shown_count": len(rows),
+            "records": cleaned_rows,
+            "shown_count": len(cleaned_rows),
             "plan": {
                 "filters": filters,
                 "or_filters": or_filters,
                 "fields": fields,
                 "order_by": order_by,
-                "limit": limit,
+                "limit": query_limit,
             },
         }
 
-    # Python-side aggregate for safe numeric operations
-    aggregate_field = normalize_space(plan.get("aggregate_field"))
-    valid_fields = get_valid_fields_map(schema)
-    if aggregate_field not in valid_fields:
-        return {"ok": False, "error": "Aggregate field schema me valid nahi hai."}
-    rows = frappe.get_list(
-        doctype,
-        filters=filters,
-        or_filters=or_filters or None,
-        fields=["name", aggregate_field],
-        limit_page_length=get_llm_config()["max_count_scan_rows"],
-        order_by=order_by,
+    # ---------------------------------------------------------
+    # Numeric aggregates
+    # ---------------------------------------------------------
+
+    aggregate_field = normalize_space(
+        plan.get("aggregate_field")
     )
+
+    valid_fields = get_valid_fields_map(
+        schema
+    )
+
+    if aggregate_field not in valid_fields:
+        return {
+            "ok": False,
+            "error": (
+                "Aggregate field schema me valid nahi hai."
+            ),
+        }
+
+    aggregate_meta = valid_fields[
+        aggregate_field
+    ]
+
+    allowed_numeric_fieldtypes = {
+        "Int",
+        "Long Int",
+        "Float",
+        "Currency",
+        "Percent",
+        "Duration",
+        "Rating",
+    }
+
+    if (
+        aggregate_meta.get("fieldtype")
+        not in allowed_numeric_fieldtypes
+    ):
+        return {
+            "ok": False,
+            "error": (
+                f"{aggregate_field} numeric field nahi hai. "
+                "sum/avg/min/max sirf numeric fields par allowed hain."
+            ),
+        }
+
+    page_size = 5000
+    maximum_rows = max(
+        config["max_count_scan_rows"],
+        500000,
+    )
+
+    start = 0
+    matched_rows = 0
     values = []
-    for r in rows:
-        v = r.get(aggregate_field)
-        try:
-            if v is not None:
-                values.append(float(v))
-        except Exception:
-            pass
+    truncated = False
+
+    while matched_rows < maximum_rows:
+        remaining = (
+            maximum_rows
+            - matched_rows
+        )
+
+        current_page_size = min(
+            page_size,
+            remaining,
+        )
+
+        rows = frappe.get_list(
+            doctype,
+            filters=filters,
+            or_filters=or_filters or None,
+            fields=[
+                "name",
+                aggregate_field,
+            ],
+            limit_start=start,
+            limit_page_length=current_page_size,
+            order_by=order_by,
+        )
+
+        row_count = len(rows)
+        matched_rows += row_count
+
+        for row in rows:
+            value = row.get(
+                aggregate_field
+            )
+
+            if value is None or value == "":
+                continue
+
+            try:
+                values.append(
+                    float(value)
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+        if row_count < current_page_size:
+            break
+
+        start += row_count
+
+    if matched_rows >= maximum_rows:
+        truncated = True
+
     if operation == "sum":
-        agg_value = sum(values)
+        aggregate_value = sum(values)
+
     elif operation == "avg":
-        agg_value = sum(values) / len(values) if values else 0
+        aggregate_value = (
+            sum(values) / len(values)
+            if values
+            else 0
+        )
+
     elif operation == "min":
-        agg_value = min(values) if values else 0
+        aggregate_value = (
+            min(values)
+            if values
+            else 0
+        )
+
     elif operation == "max":
-        agg_value = max(values) if values else 0
+        aggregate_value = (
+            max(values)
+            if values
+            else 0
+        )
+
     else:
-        agg_value = 0
+        return {
+            "ok": False,
+            "error": (
+                f"Unsupported aggregate operation: {operation}"
+            ),
+        }
+
     return {
         "ok": True,
         "operation": operation,
         "doctype": doctype,
         "aggregate_field": aggregate_field,
-        "value": agg_value,
-        "matched_rows": len(rows),
+        "value": aggregate_value,
+        "matched_rows": matched_rows,
+        "numeric_value_count": len(values),
+        "truncated": truncated,
+        "warning": (
+            "Aggregate configured maximum rows tak calculate hua. "
+            "Actual result different ho sakta hai."
+            if truncated
+            else None
+        ),
         "plan": {
             "filters": filters,
             "or_filters": or_filters,
-            "fields": ["name", aggregate_field],
+            "fields": [
+                "name",
+                aggregate_field,
+            ],
             "order_by": order_by,
         },
     }
+    
+    
 # step 4th =>  Zero-result retry: Agar query 0 records de, to retry_with_broader_search()
 #  deterministic retry karta hai — multi-word search ("%Abhishek Soni%") ko sirf pehle word ("%Abhishek%") se dobara try karta hai.
 #  Ye Python logic hai, model pe depend nahi.
@@ -2143,7 +3435,20 @@ def build_tool_plan(question, context):
     if doctype:
         plan.append({"tool": "get_doctype_schema", "args": {"doctype": doctype}})
         if isinstance(doc, dict):
-            plan.append({"tool": "analyze_current_doc", "args": {"doctype": doctype, "doc": doc}})
+            validation_words = [
+                "check", "validate", "validation", "mistake", "galti",
+                "wrong", "incorrect", "error", "save", "submit",
+                "format", "nature", "field", "filed",
+            ]
+            validation_tool = (
+                "validate_current_document"
+                if any(word in q for word in validation_words)
+                else "analyze_current_doc"
+            )
+            plan.append({
+                "tool": validation_tool,
+                "args": {"doctype": doctype, "doc": doc},
+            })
         if docname and any(word in q for word in ["record", "document", "doc", "details", "data"]):
             plan.append({"tool": "get_record", "args": {"doctype": doctype, "name": docname}})
 
@@ -2166,13 +3471,1307 @@ def run_tool_plan(plan):
     return outputs
 
 
+
+
+
+
+
+
+
+FORM_LAYOUT_FIELD_TYPES = {
+    "Section Break",
+    "Column Break",
+    "Tab Break",
+    "HTML",
+    "Button",
+    "Image",
+    "Fold",
+    "Heading",
+}
+
+
+FORM_VALIDATION_SYSTEM_PROMPT = """
+You are a schema-aware ERP form validation agent.
+
+You will receive:
+
+1. The current Frappe DocType name.
+2. The complete live DocType field schema.
+3. Current unsaved values entered by the user.
+4. Child-table schemas and child-table values.
+5. Deterministic validation results from Frappe.
+6. The user's question or validation issue.
+
+Your job is to understand the intended nature of every field dynamically.
+
+Validation rules:
+
+- Never use hardcoded knowledge about a particular DocType or field.
+- Never assume that a specific field always has a fixed business meaning.
+- Use the live field label, fieldname, fieldtype, description, options,
+  mandatory state, dependencies, sibling fields and current values.
+- Compare each value with the purpose indicated by its field metadata.
+- Detect semantic mismatches, misplaced data, contradictory data,
+  incomplete data, unsuitable formatting and values that appear to belong
+  to another available field.
+- Analyze relationships between sibling fields.
+- Analyze child-table fields and their row values.
+- Never invent a field that is not present in the supplied schema.
+- Never claim that a field is empty when the current value is supplied.
+- Do not flag harmless style differences unless the schema or description
+  clearly requires a particular style.
+- Only report a semantic mistake when confidence is high.
+- If metadata is insufficient to establish a mistake, say that the issue
+  cannot be confirmed from the schema.
+- Give the correction based on the actual schema and current values.
+- Do not apply a field-specific fallback rule.
+- Do not use database query planning for this task.
+
+Reply in professional conversational Hinglish using Roman script.
+
+Response format:
+
+Issue:
+<what is wrong>
+
+Reason:
+<why it conflicts with the field schema or related fields>
+
+Correction:
+<what the user should enter or change>
+
+Affected Field:
+<exact field label and fieldname from the supplied schema>
+
+If no mistake can be confirmed, clearly say:
+"No high-confidence semantic mistake was found from the available schema."
+"""
+
+
+def _serialize_field_value(value, depth=0):
+    """
+    Convert current form values into safe JSON-compatible data.
+    Keeps numbers, zero values, checks, dates and child-table rows.
+    """
+
+    if depth > 5:
+        return None
+
+    if value is None:
+        return None
+
+    if isinstance(
+        value,
+        (
+            str,
+            int,
+            float,
+            bool,
+        ),
+    ):
+        return value
+
+    if isinstance(value, list):
+        return [
+            _serialize_field_value(
+                row,
+                depth + 1,
+            )
+            for row in value[:100]
+        ]
+
+    if isinstance(value, dict):
+        output = {}
+
+        for key, child_value in value.items():
+            key_text = str(key)
+
+            if key_text.startswith("__"):
+                continue
+
+            if key_text in {
+                "_liked_by",
+                "_comments",
+                "_assign",
+                "_user_tags",
+            }:
+                continue
+
+            output[key_text] = (
+                _serialize_field_value(
+                    child_value,
+                    depth + 1,
+                )
+            )
+
+        return output
+
+    return str(value)
+
+
+def _build_field_schema(
+    df,
+    current_value=None,
+):
+    """
+    Build one field definition entirely from live Frappe metadata.
+    No field or business rule is hardcoded.
+    """
+
+    return {
+        "fieldname": df.fieldname,
+        "label": df.label,
+        "fieldtype": df.fieldtype,
+        "options": df.options,
+        "description": df.description,
+        "mandatory": bool(df.reqd),
+        "read_only": bool(df.read_only),
+        "hidden": bool(df.hidden),
+        "default": df.default,
+        "unique": bool(
+            getattr(
+                df,
+                "unique",
+                False,
+            )
+        ),
+        "length": getattr(
+            df,
+            "length",
+            None,
+        ),
+        "depends_on": getattr(
+            df,
+            "depends_on",
+            None,
+        ),
+        "mandatory_depends_on": getattr(
+            df,
+            "mandatory_depends_on",
+            None,
+        ),
+        "read_only_depends_on": getattr(
+            df,
+            "read_only_depends_on",
+            None,
+        ),
+        "fetch_from": getattr(
+            df,
+            "fetch_from",
+            None,
+        ),
+        "current_value": (
+            _serialize_field_value(
+                current_value
+            )
+        ),
+    }
+
+
+def build_live_form_validation_context(
+    doctype,
+    doc_data,
+):
+    """
+    Read the actual current DocType schema and current unsaved form data.
+
+    The function does not know or assume any business field names.
+    """
+
+    if not doctype:
+        raise ValueError(
+            "Current DocType is missing."
+        )
+
+    if not frappe.db.exists(
+        "DocType",
+        doctype,
+    ):
+        raise ValueError(
+            f"DocType not found: {doctype}"
+        )
+
+    if not frappe.has_permission(
+        doctype,
+        "read",
+    ):
+        raise frappe.PermissionError(
+            f"No read permission for {doctype}"
+        )
+
+    meta = frappe.get_meta(doctype)
+
+    cleaned_document = clean_doc(
+        _serialize_field_value(
+            doc_data or {}
+        )
+    )
+
+    parent_fields = []
+    child_tables = []
+
+    for df in meta.fields:
+        if not df.fieldname:
+            continue
+
+        if (
+            df.fieldtype
+            in FORM_LAYOUT_FIELD_TYPES
+        ):
+            continue
+
+        current_value = cleaned_document.get(
+            df.fieldname
+        )
+
+        parent_fields.append(
+            _build_field_schema(
+                df,
+                current_value=current_value,
+            )
+        )
+
+        if (
+            df.fieldtype
+            not in {
+                "Table",
+                "Table MultiSelect",
+            }
+            or not df.options
+        ):
+            continue
+
+        try:
+            child_meta = frappe.get_meta(
+                df.options
+            )
+        except Exception:
+            continue
+
+        child_field_schema = []
+
+        for child_df in child_meta.fields:
+            if not child_df.fieldname:
+                continue
+
+            if (
+                child_df.fieldtype
+                in FORM_LAYOUT_FIELD_TYPES
+            ):
+                continue
+
+            child_field_schema.append(
+                _build_field_schema(
+                    child_df
+                )
+            )
+
+        child_rows = current_value
+
+        if not isinstance(
+            child_rows,
+            list,
+        ):
+            child_rows = []
+
+        child_tables.append(
+            {
+                "parent_fieldname": (
+                    df.fieldname
+                ),
+                "parent_label": (
+                    df.label
+                ),
+                "child_doctype": (
+                    df.options
+                ),
+                "fields": (
+                    child_field_schema
+                ),
+                "rows": (
+                    child_rows[:50]
+                ),
+            }
+        )
+
+    deterministic_analysis = run_tool(
+        "analyze_current_doc",
+        {
+            "doctype": doctype,
+            "doc": cleaned_document,
+        },
+    )
+
+    return {
+        "doctype": doctype,
+        "module": meta.module,
+        "title_field": meta.title_field,
+        "is_submittable": bool(
+            meta.is_submittable
+        ),
+        "fields": parent_fields,
+        "child_tables": child_tables,
+        "current_document": (
+            cleaned_document
+        ),
+        "deterministic_analysis": (
+            deterministic_analysis
+        ),
+    }
+
+
+def answer_dynamic_form_validation(
+    question,
+    context,
+    preferred_model="local",
+):
+    """
+    Ask the local model to determine the mistake from live metadata.
+
+    No field-specific rule or fallback exists here.
+    """
+
+    doctype = context.get("doctype")
+
+    document_data = context.get("doc")
+
+    if not doctype:
+        raise ValueError(
+            "Open a DocType form before running form validation."
+        )
+
+    if not isinstance(
+        document_data,
+        dict,
+    ):
+        raise ValueError(
+            "Current form data is not available."
+        )
+
+    validation_context = (
+        build_live_form_validation_context(
+            doctype=doctype,
+            doc_data=document_data,
+        )
+    )
+
+    payload = {
+        "user_question": question,
+        "active_doctype": doctype,
+        "current_docname": (
+            context.get("docname")
+        ),
+        "form_context": (
+            validation_context
+        ),
+    }
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                FORM_VALIDATION_SYSTEM_PROMPT
+            ),
+        },
+        {
+            "role": "user",
+            "content": truncate_text(
+                json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                    default=str,
+                ),
+                30000,
+            ),
+        },
+    ]
+
+    answer, model_used = llm_chat(
+        messages,
+        preferred_model=(
+            preferred_model or "local"
+        ),
+        expect_json=False,
+    )
+
+    answer = normalize_space(
+        answer
+    )
+
+    if not answer:
+        raise RuntimeError(
+            "Local model returned an empty validation answer."
+        )
+
+    return (
+        answer,
+        model_used,
+        validation_context,
+    )
+
+
+def is_form_validation_request(
+    question,
+    context,
+):
+    """
+    This only routes the request.
+
+    It does not decide the field, mistake type or correction.
+    """
+
+    if not context.get("doctype"):
+        return False
+
+    if not isinstance(
+        context.get("doc"),
+        dict,
+    ):
+        return False
+
+    question_text = normalize_space(
+        question
+    ).lower()
+
+    routing_terms = {
+        "validation",
+        "validate",
+        "field error",
+        "form error",
+        "incorrect value",
+        "wrong value",
+        "correct value",
+        "mandatory",
+        "cannot be blank",
+        "missing field",
+        "current form",
+        "check form",
+        "fix form",
+        "galti",
+        "galat",
+        "sahi value",
+    }
+
+    return any(
+        term in question_text
+        for term in routing_terms
+    )
+
+
+
+
+
+
+
+
+CURRENT_DOCUMENT_QUERY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "handled": {
+            "type": "boolean",
+        },
+        "operation": {
+            "type": "string",
+            "enum": [
+                "count_rows",
+                "count_non_empty",
+                "get_value",
+                "sum_values",
+                "average_values",
+                "minimum_value",
+                "maximum_value",
+            ],
+        },
+        "fieldname": {
+            "type": [
+                "string",
+                "null",
+            ],
+        },
+        "child_fieldname": {
+            "type": [
+                "string",
+                "null",
+            ],
+        },
+        "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+        },
+        "reason": {
+            "type": "string",
+        },
+    },
+    "required": [
+        "handled",
+        "operation",
+        "fieldname",
+        "child_fieldname",
+        "confidence",
+        "reason",
+    ],
+}
+
+
+def _field_has_value(value):
+    """
+    Generic Frappe value-presence check.
+    """
+
+    return value not in (
+        None,
+        "",
+        [],
+        {},
+    )
+
+
+def _safe_live_rows(value):
+    """
+    Return active rows from a current unsaved child-table value.
+
+    Browser-marked deleted rows are excluded.
+    """
+
+    if not isinstance(value, list):
+        return []
+
+    rows = []
+
+    for row in value:
+        if not isinstance(row, dict):
+            continue
+
+        if row.get("__deleted"):
+            continue
+
+        rows.append(row)
+
+    return rows
+
+
+def build_current_document_query_catalog(
+    doctype,
+    document,
+):
+    """
+    Build a compact, completely metadata-driven catalog of the
+    current document.
+
+    No DocType name, business word or fieldname is assumed.
+    """
+
+    if not doctype:
+        return {
+            "doctype": None,
+            "fields": [],
+        }
+
+    if not isinstance(document, dict):
+        return {
+            "doctype": doctype,
+            "fields": [],
+        }
+
+    meta = frappe.get_meta(doctype)
+    catalog = []
+
+    for df in meta.fields:
+        if not df.fieldname:
+            continue
+
+        if df.fieldtype in {
+            "Section Break",
+            "Column Break",
+            "Tab Break",
+            "HTML",
+            "Button",
+            "Image",
+            "Fold",
+            "Heading",
+        }:
+            continue
+
+        value = document.get(df.fieldname)
+
+        field_data = {
+            "fieldname": df.fieldname,
+            "label": df.label or df.fieldname,
+            "fieldtype": df.fieldtype,
+            "options": df.options,
+            "description": normalize_space(
+                df.description
+            )[:250],
+            "has_value": _field_has_value(value),
+        }
+
+        if df.fieldtype in {
+            "Table",
+            "Table MultiSelect",
+        }:
+            rows = _safe_live_rows(value)
+
+            child_fields = []
+
+            if df.options:
+                try:
+                    child_meta = frappe.get_meta(
+                        df.options
+                    )
+
+                    for child_df in child_meta.fields:
+                        if not child_df.fieldname:
+                            continue
+
+                        if child_df.fieldtype in {
+                            "Section Break",
+                            "Column Break",
+                            "Tab Break",
+                            "HTML",
+                            "Button",
+                            "Image",
+                            "Fold",
+                            "Heading",
+                        }:
+                            continue
+
+                        child_fields.append({
+                            "fieldname": (
+                                child_df.fieldname
+                            ),
+                            "label": (
+                                child_df.label
+                                or child_df.fieldname
+                            ),
+                            "fieldtype": (
+                                child_df.fieldtype
+                            ),
+                            "options": (
+                                child_df.options
+                            ),
+                            "description": normalize_space(
+                                child_df.description
+                            )[:180],
+                        })
+
+                except Exception:
+                    frappe.log_error(
+                        frappe.get_traceback(),
+                        (
+                            "Classic Chatbot Current "
+                            "Document Child Metadata Error"
+                        ),
+                    )
+
+            field_data.update({
+                "row_count": len(rows),
+                "child_doctype": df.options,
+                "child_fields": child_fields,
+            })
+
+        else:
+            field_data["value_preview"] = (
+                _json_safe_for_current_query(
+                    value
+                )
+            )
+
+        catalog.append(field_data)
+
+    return {
+        "doctype": doctype,
+        "title_field": meta.title_field,
+        "fields": catalog,
+    }
+
+
+def _json_safe_for_current_query(
+    value,
+    max_chars=300,
+):
+    """
+    Prepare a small safe preview for query routing.
+    """
+
+    if value is None:
+        return None
+
+    if isinstance(
+        value,
+        (
+            int,
+            float,
+            bool,
+        ),
+    ):
+        return value
+
+    if isinstance(value, str):
+        return normalize_space(value)[
+            :max_chars
+        ]
+
+    return str(value)[:max_chars]
+
+
+def _get_current_query_llm_config():
+    """
+    Small and fast configuration for current-document routing.
+    """
+
+    base = get_llm_config().copy()
+
+    base["num_ctx"] = 1024
+    base["num_predict"] = 100
+    base["temperature"] = 0.0
+
+    return base
+
+
+def resolve_current_document_query(
+    question,
+    context,
+):
+    """
+    Let the local model map a natural-language question to one exact
+    field from the current live DocType metadata.
+
+    Important:
+    - No fixed DocType names.
+    - No fixed fieldnames.
+    - No fixed business vocabulary.
+    - Model only selects from supplied live metadata.
+    - Python executes the selected operation.
+    """
+
+    doctype = context.get("doctype")
+    document = context.get("doc")
+
+    if not doctype:
+        return {
+            "handled": False,
+        }
+
+    if not isinstance(document, dict):
+        return {
+            "handled": False,
+        }
+
+    if not frappe.db.exists(
+        "DocType",
+        doctype,
+    ):
+        return {
+            "handled": False,
+        }
+
+    if not (
+        frappe.has_permission(
+            doctype,
+            "read",
+        )
+        or frappe.has_permission(
+            doctype,
+            "create",
+        )
+    ):
+        return {
+            "handled": False,
+        }
+
+    catalog = (
+        build_current_document_query_catalog(
+            doctype=doctype,
+            document=document,
+        )
+    )
+
+    if not catalog.get("fields"):
+        return {
+            "handled": False,
+        }
+
+    system_prompt = """
+You are a routing engine for a currently open Frappe document.
+
+Determine whether the user's question can be answered directly from the
+supplied current-document metadata and current unsaved values.
+
+You must not answer the question yourself. Return only a JSON execution plan.
+
+Rules:
+1. Never invent a DocType or field.
+2. fieldname must exactly match one supplied top-level fieldname.
+3. child_fieldname must exactly match a supplied child field when required.
+4. Use count_rows only for the number of rows in one supplied table field.
+5. Use count_non_empty for the number of populated values in a table child field.
+6. Use get_value for one top-level field's current value.
+7. Use sum_values, average_values, minimum_value or maximum_value only for
+   numeric values in one supplied table child field.
+8. If the question is not specifically about the current open document,
+   return handled=false.
+9. If the requested target cannot be selected confidently from the supplied
+   labels, fieldnames, descriptions and types, return handled=false.
+10. Do not use database knowledge, general field assumptions or hidden fields.
+11. Return JSON only.
+""".strip()
+
+    payload = {
+        "question": normalize_space(question),
+        "current_document": catalog,
+        "response_schema": (
+            CURRENT_DOCUMENT_QUERY_SCHEMA
+        ),
+    }
+
+    conf = _get_current_query_llm_config()
+
+    raw = call_ollama(
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": truncate_text(
+                    json.dumps(
+                        payload,
+                        ensure_ascii=False,
+                        default=str,
+                    ),
+                    16000,
+                ),
+            },
+        ],
+        conf=conf,
+        timeout=45,
+        expect_json=True,
+    )
+
+    plan = extract_json_object(raw)
+
+    if not isinstance(plan, dict):
+        return {
+            "handled": False,
+        }
+
+    if not plan.get("handled"):
+        return {
+            "handled": False,
+        }
+
+    try:
+        confidence = float(
+            plan.get("confidence") or 0
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        confidence = 0.0
+
+    if confidence < 0.70:
+        return {
+            "handled": False,
+        }
+
+    return validate_current_document_plan(
+        plan=plan,
+        catalog=catalog,
+    )
+
+
+def validate_current_document_plan(
+    plan,
+    catalog,
+):
+    """
+    Validate every model-selected field against the actual live catalog.
+    """
+
+    allowed_operations = {
+        "count_rows",
+        "count_non_empty",
+        "get_value",
+        "sum_values",
+        "average_values",
+        "minimum_value",
+        "maximum_value",
+    }
+
+    operation = normalize_space(
+        plan.get("operation")
+    )
+
+    if operation not in allowed_operations:
+        return {
+            "handled": False,
+        }
+
+    fieldname = normalize_space(
+        plan.get("fieldname")
+    )
+
+    if not fieldname:
+        return {
+            "handled": False,
+        }
+
+    field_map = {
+        field.get("fieldname"): field
+        for field in (
+            catalog.get("fields") or []
+        )
+        if field.get("fieldname")
+    }
+
+    selected_field = field_map.get(
+        fieldname
+    )
+
+    if not selected_field:
+        return {
+            "handled": False,
+        }
+
+    child_fieldname = normalize_space(
+        plan.get("child_fieldname")
+    ) or None
+
+    table_operations = {
+        "count_rows",
+        "count_non_empty",
+        "sum_values",
+        "average_values",
+        "minimum_value",
+        "maximum_value",
+    }
+
+    child_operations = {
+        "count_non_empty",
+        "sum_values",
+        "average_values",
+        "minimum_value",
+        "maximum_value",
+    }
+
+    if (
+        operation in table_operations
+        and selected_field.get(
+            "fieldtype"
+        )
+        not in {
+            "Table",
+            "Table MultiSelect",
+        }
+    ):
+        return {
+            "handled": False,
+        }
+
+    if operation in child_operations:
+        if not child_fieldname:
+            return {
+                "handled": False,
+            }
+
+        child_field_map = {
+            field.get("fieldname"): field
+            for field in (
+                selected_field.get(
+                    "child_fields"
+                )
+                or []
+            )
+            if field.get("fieldname")
+        }
+
+        if (
+            child_fieldname
+            not in child_field_map
+        ):
+            return {
+                "handled": False,
+            }
+
+    if operation == "get_value":
+        if selected_field.get(
+            "fieldtype"
+        ) in {
+            "Table",
+            "Table MultiSelect",
+        }:
+            return {
+                "handled": False,
+            }
+
+    return {
+        "handled": True,
+        "operation": operation,
+        "fieldname": fieldname,
+        "child_fieldname": (
+            child_fieldname
+        ),
+        "selected_field": (
+            selected_field
+        ),
+        "confidence": plan.get(
+            "confidence"
+        ),
+        "reason": plan.get(
+            "reason"
+        ),
+    }
+
+
+def _to_numeric_value(value):
+    """
+    Convert one current-document value to float without guessing.
+    """
+
+    if isinstance(value, bool):
+        return None
+
+    if value in (
+        None,
+        "",
+    ):
+        return None
+
+    try:
+        return float(
+            str(value).replace(
+                ",",
+                "",
+            )
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+
+def execute_current_document_plan(
+    plan,
+    context,
+):
+    """
+    Execute the validated plan against the current unsaved document.
+    """
+
+    document = context.get("doc") or {}
+
+    fieldname = plan["fieldname"]
+    operation = plan["operation"]
+    child_fieldname = plan.get(
+        "child_fieldname"
+    )
+
+    selected_field = plan.get(
+        "selected_field"
+    ) or {}
+
+    label = (
+        selected_field.get("label")
+        or fieldname
+    )
+
+    if operation == "get_value":
+        value = document.get(fieldname)
+
+        display_value = (
+            value
+            if _field_has_value(value)
+            else "Blank"
+        )
+
+        return {
+            "answer": (
+                f"**{label}** ki current value: "
+                f"**{display_value}**"
+            ),
+            "model_used": (
+                "Python Verified Renderer"
+            ),
+            "tools_used": [
+                "live_doctype_metadata",
+                "current_unsaved_document",
+                "current_document_router",
+            ],
+            "debug": None,
+        }
+
+    rows = _safe_live_rows(
+        document.get(fieldname)
+    )
+
+    if operation == "count_rows":
+        result_value = len(rows)
+
+        return {
+            "answer": (
+                f"Current form ke **{label}** "
+                f"table me **{result_value} rows** hain."
+            ),
+            "model_used": (
+                "Python Verified Renderer"
+            ),
+            "tools_used": [
+                "live_doctype_metadata",
+                "current_unsaved_document",
+                "current_document_router",
+                "deterministic_row_count",
+            ],
+            "debug": None,
+        }
+
+    child_label = (
+        child_fieldname
+        or ""
+    )
+
+    for child_field in (
+        selected_field.get(
+            "child_fields"
+        )
+        or []
+    ):
+        if (
+            child_field.get("fieldname")
+            == child_fieldname
+        ):
+            child_label = (
+                child_field.get("label")
+                or child_fieldname
+            )
+            break
+
+    child_values = [
+        row.get(child_fieldname)
+        for row in rows
+    ]
+
+    if operation == "count_non_empty":
+        result_value = sum(
+            1
+            for value in child_values
+            if _field_has_value(value)
+        )
+
+    else:
+        numeric_values = []
+
+        for value in child_values:
+            numeric_value = (
+                _to_numeric_value(value)
+            )
+
+            if numeric_value is not None:
+                numeric_values.append(
+                    numeric_value
+                )
+
+        if operation == "sum_values":
+            result_value = sum(
+                numeric_values
+            )
+
+        elif operation == "average_values":
+            result_value = (
+                sum(numeric_values)
+                / len(numeric_values)
+                if numeric_values
+                else 0
+            )
+
+        elif operation == "minimum_value":
+            result_value = (
+                min(numeric_values)
+                if numeric_values
+                else 0
+            )
+
+        elif operation == "maximum_value":
+            result_value = (
+                max(numeric_values)
+                if numeric_values
+                else 0
+            )
+
+        else:
+            return None
+
+    return {
+        "answer": (
+            f"Current form ke **{label}** table me "
+            f"**{child_label}** ka result: "
+            f"**{result_value}**"
+        ),
+        "model_used": (
+            "Python Verified Renderer"
+        ),
+        "tools_used": [
+            "live_doctype_metadata",
+            "current_unsaved_document",
+            "current_document_router",
+            "deterministic_calculation",
+        ],
+        "debug": None,
+    }
+
+
+def answer_from_current_document(
+    question,
+    context,
+):
+    """
+    Generic current-document route.
+
+    Resolver uses the live schema.
+    Executor uses Python.
+    """
+
+    try:
+        plan = resolve_current_document_query(
+            question=question,
+            context=context,
+        )
+
+        if not plan.get("handled"):
+            return None
+
+        return execute_current_document_plan(
+            plan=plan,
+            context=context,
+        )
+
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            (
+                "Classic Chatbot Current "
+                "Document Query Error"
+            ),
+        )
+
+        # Full agent can continue if compact router fails.
+        return None
+
+
+
+
+
+
 # -----------------------------
 # PUBLIC API
 # -----------------------------
 @frappe.whitelist()
 # def ask(question, doctype=None, docname=None, doc=None, route=None, error=None, preferred_model="auto"):
 def ask(question, doctype=None, docname=None, doc=None, route=None, error=None,
-        preferred_model="auto", history=None):
+        preferred_model="local", history=None):
 
     if not question:
         frappe.throw("Question is required")
@@ -2184,10 +4783,118 @@ def ask(question, doctype=None, docname=None, doc=None, route=None, error=None,
         "route": safe_json(route, []),
         "error": error,
         "user": frappe.session.user,
+    
+    
     }
+    
+    
+    
+    
+        # ========================================================
+    # GENERIC CURRENT DOCUMENT QUERY
+    # Live schema decides the field; Python calculates result.
+    # ========================================================
+
+    current_document_answer = (
+        answer_from_current_document(
+            question=question,
+            context=context,
+        )
+    )
+
+    if current_document_answer:
+        return current_document_answer
+
+
+
+
+        # ========================================================
+    # DYNAMIC FORM VALIDATION ROUTE
+    # Only routes the request; field analysis is done by AI.
+    # ========================================================
+
+    if is_form_validation_request(
+        question,
+        context,
+    ):
+        try:
+            (
+                answer,
+                model_used,
+                validation_context,
+            ) = answer_dynamic_form_validation(
+                question=question,
+                context=context,
+                preferred_model=(
+                    preferred_model
+                    or "local"
+                ),
+            )
+
+            return {
+                "answer": answer,
+                "model_used": model_used,
+                "tools_used": [
+                    "live_doctype_schema",
+                    "current_unsaved_document",
+                    "child_table_schema",
+                    "deterministic_form_analysis",
+                    "local_semantic_validation",
+                ],
+                "debug": (
+                    validation_context
+                    if frappe.conf.get(
+                        "classic_chatbot_debug"
+                    )
+                    else None
+                ),
+            }
+
+        except Exception as exc:
+            frappe.log_error(
+                frappe.get_traceback(),
+                (
+                    "Classic Chatbot Dynamic "
+                    "Form Validation Error"
+                ),
+            )
+
+            return {
+                "answer": (
+                    "Local form validation model "
+                    "current schema ko analyse nahi "
+                    f"kar paya. Error: {str(exc)}"
+                ),
+                "model_used": (
+                    "⚠️ Local Validation Error"
+                ),
+                "tools_used": [
+                    "live_doctype_schema",
+                    "current_unsaved_document",
+                ],
+                "debug": None,
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
     # 0) Groq mode: full agent loop (model khud tools decide karta hai)
-    if preferred_model in ("groq", "auto") and get_llm_config().get("groq_api_key"):
+    if preferred_model == "groq" and get_llm_config().get("groq_api_key"):
         try:
             answer, debug = groq_agent_answer(question, context, history=safe_json(history, []))
             if answer:
@@ -2243,6 +4950,9 @@ def ask(question, doctype=None, docname=None, doc=None, route=None, error=None,
         "tools_used": [step.get("tool") for step in plan],
         "debug": None,
     }
+    
+    
+    
 
 @frappe.whitelist()
 def inspect_current_context(doctype=None, docname=None, doc=None, route=None, error=None):
@@ -2280,6 +4990,7 @@ def test_schema_agent(question, doctype=None):
             "tools_used": ["agent_loop"],
             "debug": debug if frappe.conf.get("classic_chatbot_debug") else None,
         }
+    
 
 
 
@@ -2300,93 +5011,6 @@ def test_schema_agent(question, doctype=None):
 
 
 
-# ============================================================
-# WHOLE FORM VALIDATION API FOR CLASSIC ERROR AVATAR
-# ============================================================
-
-FORM_LAYOUT_FIELD_TYPES = {
-    "Section Break",
-    "Column Break",
-    "Tab Break",
-    "HTML",
-    "Button",
-    "Image",
-    "Fold",
-    "Heading",
-}
-
-EMAIL_PATTERN = re.compile(
-    r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-)
-
-PHONE_ALLOWED_PATTERN = re.compile(
-    r"^[0-9+\-()\s.]+$"
-)
-
-
-def _form_value_is_empty(value):
-    """
-    Zero and False are valid values.
-    Only actual blank values are treated as empty.
-    """
-    return value is None or value == "" or value == [] or value == {}
-
-
-def _safe_json_list(value):
-    parsed = safe_json(value, [])
-
-    if isinstance(parsed, list):
-        return parsed
-
-    if isinstance(parsed, tuple):
-        return list(parsed)
-
-    return []
-
-
-def _validate_data_format(df, value):
-    """
-    Validate generic Data field options without hardcoding a DocType.
-    """
-    if value in (None, ""):
-        return None
-
-    option = normalize_space(df.options).lower()
-    text = str(value).strip()
-
-    if option == "email":
-        if not EMAIL_PATTERN.match(text):
-            return (
-                f"Please valid {df.label or df.fieldname} enter kijiye. "
-                "Email format sahi nahi hai."
-            )
-
-    elif option == "phone":
-        digit_count = len(
-            re.sub(r"\D", "", text)
-        )
-
-        if (
-            not PHONE_ALLOWED_PATTERN.match(text)
-            or digit_count < 7
-            or digit_count > 15
-        ):
-            return (
-                f"Please valid {df.label or df.fieldname} enter kijiye. "
-                "Phone number format sahi nahi hai."
-            )
-
-    elif option == "url":
-        if not re.match(
-            r"^(https?://|www\.)[^\s]+$",
-            text,
-            re.IGNORECASE,
-        ):
-            return (
-                f"Please valid {df.label or df.fieldname} URL enter kijiye."
-            )
-
-    return None
 
 
 @frappe.whitelist()
@@ -2396,354 +5020,25 @@ def validate_current_form(
     doc=None,
     required_fields=None,
     visible_fields=None,
-    fieldname=None,
-    full_scan=0,
+    run_ai=1,
 ):
     """
-    Validate the currently open unsaved form.
+    Current avatar may call:
 
-    It checks:
-    - Visible mandatory fields
-    - Invalid Link values
-    - Invalid Select values
-    - Email, Phone and URL formats
-    - Mandatory fields inside child tables
-    - Link/Select/Data validation inside child rows
+    classic_chatbot.api.agent.validate_current_form
 
-    It does not save or modify the document.
+    Actual validation is handled by validation.py.
     """
 
-    if not doctype:
-        frappe.throw(_("DocType is required."))
+    from classic_chatbot.api.validation import (
+        validate_current_form as execute_validation,
+    )
 
-    if not frappe.db.exists("DocType", doctype):
-        frappe.throw(
-            _("DocType {0} does not exist.").format(doctype)
-        )
-
-    if not frappe.has_permission(doctype, "read"):
-        frappe.throw(
-            _("You do not have permission to read {0}.").format(
-                doctype
-            )
-        )
-
-    doc_data = safe_json(doc, {}) or {}
-
-    if not isinstance(doc_data, dict):
-        frappe.throw(_("Current document data is invalid."))
-
-    doc_data["doctype"] = doctype
-
-    if docname and not doc_data.get("name"):
-        doc_data["name"] = docname
-
-    required_set = {
-        normalize_space(value)
-        for value in _safe_json_list(required_fields)
-        if normalize_space(value)
-    }
-
-    visible_set = {
-        normalize_space(value)
-        for value in _safe_json_list(visible_fields)
-        if normalize_space(value)
-    }
-
-    requested_field = normalize_space(fieldname)
-    run_full_scan = str(full_scan).lower() in {
-        "1",
-        "true",
-        "yes",
-    }
-
-    issues = []
-    issue_keys = set()
-
-    def add_issue(
-        issue_type,
-        target_fieldname,
-        label,
-        message,
-        value=None,
-        child_fieldname=None,
-        row_index=None,
-    ):
-        key = (
-            issue_type,
-            target_fieldname,
-            child_fieldname,
-            row_index,
-            message,
-        )
-
-        if key in issue_keys:
-            return
-
-        issue_keys.add(key)
-
-        issues.append({
-            "type": issue_type,
-            "fieldname": target_fieldname,
-            "child_fieldname": child_fieldname,
-            "label": label,
-            "message": message,
-            "value": value,
-            "row_index": row_index,
-        })
-
-    def should_validate_parent_field(df):
-        if run_full_scan or not requested_field:
-            return True
-
-        return df.fieldname == requested_field
-
-    def validate_field(
-        df,
-        row_data,
-        target_fieldname=None,
-        parent_table_field=None,
-        row_index=None,
-        force_required=None,
-    ):
-        if not df.fieldname:
-            return
-
-        if df.fieldtype in FORM_LAYOUT_FIELD_TYPES:
-            return
-
-        value = row_data.get(df.fieldname)
-
-        field_label = df.label or df.fieldname
-        focus_fieldname = (
-            parent_table_field
-            or target_fieldname
-            or df.fieldname
-        )
-
-        if force_required is None:
-            is_required = bool(df.reqd)
-        else:
-            is_required = bool(force_required)
-
-        if is_required and _form_value_is_empty(value):
-            if row_index:
-                message = (
-                    f"Row {row_index} me {field_label} fill kijiye. "
-                    "Yeh field mandatory hai."
-                )
-            else:
-                message = (
-                    f"Please {field_label} fill kijiye. "
-                    "Yeh field mandatory hai."
-                )
-
-            add_issue(
-                issue_type="mandatory",
-                target_fieldname=focus_fieldname,
-                child_fieldname=(
-                    df.fieldname
-                    if parent_table_field
-                    else None
-                ),
-                label=field_label,
-                message=message,
-                row_index=row_index,
-            )
-
-            return
-
-        if _form_value_is_empty(value):
-            return
-
-        # Link validation
-        if df.fieldtype == "Link" and df.options:
-            try:
-                if not frappe.db.exists(df.options, value):
-                    add_issue(
-                        issue_type="invalid_link",
-                        target_fieldname=focus_fieldname,
-                        child_fieldname=(
-                            df.fieldname
-                            if parent_table_field
-                            else None
-                        ),
-                        label=field_label,
-                        value=value,
-                        row_index=row_index,
-                        message=(
-                            f"{field_label} me selected value "
-                            f"'{value}' {df.options} master me nahi mili."
-                        ),
-                    )
-            except Exception as link_error:
-                frappe.log_error(
-                    message=frappe.get_traceback(),
-                    title="Classic Form Link Validation Error",
-                )
-
-        # Dynamic Link validation
-        elif df.fieldtype == "Dynamic Link" and df.options:
-            linked_doctype = row_data.get(df.options)
-
-            if linked_doctype and value:
-                try:
-                    if (
-                        frappe.db.exists(
-                            "DocType",
-                            linked_doctype,
-                        )
-                        and not frappe.db.exists(
-                            linked_doctype,
-                            value,
-                        )
-                    ):
-                        add_issue(
-                            issue_type="invalid_dynamic_link",
-                            target_fieldname=focus_fieldname,
-                            child_fieldname=(
-                                df.fieldname
-                                if parent_table_field
-                                else None
-                            ),
-                            label=field_label,
-                            value=value,
-                            row_index=row_index,
-                            message=(
-                                f"{field_label} me selected value "
-                                f"'{value}' {linked_doctype} me nahi mili."
-                            ),
-                        )
-                except Exception:
-                    frappe.log_error(
-                        frappe.get_traceback(),
-                        "Classic Dynamic Link Validation Error",
-                    )
-
-        # Select validation
-        elif df.fieldtype == "Select" and df.options:
-            valid_options = [
-                option.strip()
-                for option in str(df.options).splitlines()
-                if option.strip()
-            ]
-
-            if (
-                valid_options
-                and str(value).strip() not in valid_options
-            ):
-                add_issue(
-                    issue_type="invalid_select",
-                    target_fieldname=focus_fieldname,
-                    child_fieldname=(
-                        df.fieldname
-                        if parent_table_field
-                        else None
-                    ),
-                    label=field_label,
-                    value=value,
-                    row_index=row_index,
-                    message=(
-                        f"{field_label} me '{value}' valid option nahi hai. "
-                        "Please list me se correct option select kijiye."
-                    ),
-                )
-
-        # Generic Data validation
-        elif df.fieldtype == "Data":
-            format_error = _validate_data_format(
-                df,
-                value,
-            )
-
-            if format_error:
-                add_issue(
-                    issue_type="invalid_format",
-                    target_fieldname=focus_fieldname,
-                    child_fieldname=(
-                        df.fieldname
-                        if parent_table_field
-                        else None
-                    ),
-                    label=field_label,
-                    value=value,
-                    row_index=row_index,
-                    message=format_error,
-                )
-
-    meta = frappe.get_meta(doctype)
-
-    for df in meta.fields:
-        if not should_validate_parent_field(df):
-            continue
-
-        # Client-side current UI state is preferred because
-        # frm.set_df_property may dynamically change mandatory status.
-        if required_set:
-            parent_required = df.fieldname in required_set
-        else:
-            parent_required = bool(df.reqd)
-
-        # Hidden fields should not produce a user-facing mandatory error.
-        is_visible = (
-            not visible_set
-            or df.fieldname in visible_set
-        )
-
-        effective_required = (
-            parent_required and is_visible
-        )
-
-        validate_field(
-            df=df,
-            row_data=doc_data,
-            target_fieldname=df.fieldname,
-            force_required=effective_required,
-        )
-
-        # Child table validation
-        if (
-            df.fieldtype == "Table"
-            and df.options
-            and (
-                run_full_scan
-                or not requested_field
-                or requested_field == df.fieldname
-            )
-        ):
-            child_rows = doc_data.get(df.fieldname) or []
-
-            if not isinstance(child_rows, list):
-                continue
-
-            try:
-                child_meta = frappe.get_meta(df.options)
-            except Exception:
-                continue
-
-            for row_number, child_row in enumerate(
-                child_rows,
-                start=1,
-            ):
-                if not isinstance(child_row, dict):
-                    continue
-
-                for child_df in child_meta.fields:
-                    validate_field(
-                        df=child_df,
-                        row_data=child_row,
-                        parent_table_field=df.fieldname,
-                        row_index=row_number,
-                        force_required=bool(child_df.reqd),
-                    )
-
-    first_issue = issues[0] if issues else None
-
-    return {
-        "ok": not bool(issues),
-        "doctype": doctype,
-        "docname": doc_data.get("name"),
-        "issue_count": len(issues),
-        "first_issue": first_issue,
-        "issues": issues[:100],
-    }
+    return execute_validation(
+        doctype=doctype,
+        docname=docname,
+        doc=doc,
+        required_fields=required_fields,
+        visible_fields=visible_fields,
+        run_ai=run_ai,
+    )
