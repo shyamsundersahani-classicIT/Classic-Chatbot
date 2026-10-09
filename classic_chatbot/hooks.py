@@ -389,7 +389,8 @@ app_license = "mit"
 
 app_include_js = [
     "/assets/classic_chatbot/js/classic_chatbot_agent.js",
-    "/assets/classic_chatbot/js/classic_form_ai_validator.js",
+    # AI validation of the Contact form is switched off: Contact must never be checked by AI.
+    # "/assets/classic_chatbot/js/classic_form_ai_validator.js",
 ]
 
 
@@ -398,14 +399,16 @@ app_include_js = [
 # AI validation currently runs only on Contact.
 # ============================================================
 
-doc_events = {
-    "Contact": {
-        "validate": (
-            "classic_chatbot.api.validation."
-            "strict_ai_backend_validator"
-        )
-    }
-}
+# Switched off: Contact must never be checked by the AI validator on save.
+# doc_events = {
+#     "Contact": {
+#         "validate": (
+#             "classic_chatbot.api.validation."
+#             "strict_ai_backend_validator"
+#         )
+#     }
+# }
+doc_events = {}
 
 
 
